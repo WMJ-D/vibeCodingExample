@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "书签 & 标签页助手",
+  "description": "读取浏览器书签和当前标签页，注入到管理后台页面",
+  "version": "1.0.0",
+  "permissions": [
+    "bookmarks",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:*/*",
+        "http://127.0.0.1:*/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "书签 & 标签页助手"
+  }
+}
