@@ -191,9 +191,9 @@ import { ref, reactive, computed, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 
 /* ========== 常量 ========== */
-/** 文件分片大小：64KB */
-const CHUNK_SIZE = 64 * 1024
-/** 缓冲区水位线：1MB，超过则暂停等待 drain */
+/** 文件分片大小：256kb */
+const CHUNK_SIZE = 256 * 1024
+/** 缓冲区水位线：2MB，超过则暂停等待 drain */
 const BUFFER_THRESHOLD = 1024 * 1024
 
 /* ========== WebRTC 状态 ========== */

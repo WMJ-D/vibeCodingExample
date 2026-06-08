@@ -7,7 +7,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
 import FileViewer from '@flyfish-group/file-viewer3'
-// import './styles/index.scss'
+import './styles/index.scss'
 
 const app = createApp(App)
 

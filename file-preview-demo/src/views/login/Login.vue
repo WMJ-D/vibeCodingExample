@@ -56,24 +56,25 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #07120c;
 }
 .login-card {
   width: 400px;
   padding: 40px;
-  background: #fff;
+  background: #0d1c13;
+  border: 1px solid #173f2a;
   border-radius: 12px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.28);
 }
 .login-card h2 {
   text-align: center;
   margin-bottom: 30px;
-  color: #333;
+  color: #f1fff6;
 }
 .tip {
   text-align: center;
   font-size: 12px;
-  color: #999;
+  color: #93b89f;
   margin-top: 12px;
 }
 </style>

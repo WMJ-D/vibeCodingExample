@@ -1,24 +1,30 @@
 <template>
   <div class="chart-dashboard">
-    <div class="dashboard-header">
-      <h2>数据大屏 - 图表展示</h2>
-      <el-select v-model="timeRange" style="width: 200px; margin-left: 20px;" placeholder="选择时间范围">
-        <el-option label="最近7天" value="7d" />
-        <el-option label="最近30天" value="30d" />
-        <el-option label="最近90天" value="90d" />
-      </el-select>
-      <el-button type="primary" style="margin-left: 20px;" @click="refreshData()">
-        <el-icon><Refresh /></el-icon>刷新数据
-      </el-button>
-    </div>
+    <section class="chart-dashboard__hero">
+      <div>
+        <p class="chart-dashboard__eyebrow">REALTIME ANALYTICS</p>
+        <h2 class="chart-dashboard__title">数据大屏</h2>
+        <p class="chart-dashboard__desc">统一查看用户、订单、收入、转化率和热门商品变化趋势。</p>
+      </div>
+      <div class="chart-dashboard__actions">
+        <el-select v-model="timeRange" class="time-select" placeholder="选择时间范围">
+          <el-option label="最近7天" value="7d" />
+          <el-option label="最近30天" value="30d" />
+          <el-option label="最近90天" value="90d" />
+        </el-select>
+        <el-button class="chart-dashboard__button" @click="refreshData()">
+          <el-icon><Refresh /></el-icon>刷新数据
+        </el-button>
+      </div>
+    </section>
 
     <!-- 上方统计卡片 -->
     <el-row :gutter="20" style="margin-top: 20px;">
       <el-col :span="6">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" style="background-color: #36a3f7;">
-              <el-icon style="color: white;"><UserFilled /></el-icon>
+            <div class="stat-icon stat-icon--user">
+              <el-icon><UserFilled /></el-icon>
             </div>
             <div class="stat-info">
               <div class="stat-number">{{ stats.totalUsers }}</div>
@@ -30,8 +36,8 @@
       <el-col :span="6">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" style="background-color: #34c38f;">
-              <el-icon style="color: white;"><Document /></el-icon>
+            <div class="stat-icon stat-icon--order">
+              <el-icon><Document /></el-icon>
             </div>
             <div class="stat-info">
               <div class="stat-number">{{ stats.todayOrders }}</div>
@@ -43,11 +49,11 @@
       <el-col :span="6">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" style="background-color: #f1b44c;">
-              <el-icon style="color: white;"><Money /></el-icon>
+            <div class="stat-icon stat-icon--revenue">
+              <el-icon><Money /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-number" style="color: #f1b44c;">¥{{ formatNumber(stats.totalRevenue) }}</div>
+              <div class="stat-number stat-number--revenue">¥{{ formatNumber(stats.totalRevenue) }}</div>
               <div class="stat-title">总收入</div>
             </div>
           </div>
@@ -56,8 +62,8 @@
       <el-col :span="6">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
-            <div class="stat-icon" style="background-color: #f46a6a;">
-              <el-icon style="color: white;"><TrendCharts /></el-icon>
+            <div class="stat-icon stat-icon--rate">
+              <el-icon><TrendCharts /></el-icon>
             </div>
             <div class="stat-info">
               <div class="stat-number">{{ stats.conversionRate }}%</div>
@@ -142,15 +148,15 @@
             </el-table-column>
             <el-table-column prop="growth" label="增长率" width="80">
               <template #default="{ row }">
-                <span :style="{ color: row.growth >= 0 ? '#34c38f' : '#f46a6a' }">
+                <span :class="row.growth >= 0 ? 'trend-up' : 'trend-down'">
                   {{ row.growth >= 0 ? '+' : '' }}{{ row.growth }}%
                 </span>
               </template>
             </el-table-column>
             <el-table-column label="趋势" width="80">
               <template #default="{ row }">
-                <el-icon v-if="row.growth >= 0" color="#34c38f"><Top /></el-icon>
-                <el-icon v-else color="#f46a6a"><Bottom /></el-icon>
+                <el-icon v-if="row.growth >= 0" class="trend-up"><Top /></el-icon>
+                <el-icon v-else class="trend-down"><Bottom /></el-icon>
               </template>
             </el-table-column>
           </el-table>
@@ -203,6 +209,33 @@ let pieChartInstance = null
 let weekChartInstance = null
 let lineChartInstance = null
 
+const chartPalette = {
+  bg: '#0d1c13',
+  panel: '#07120c',
+  line: '#173f2a',
+  text: '#d7ffe7',
+  muted: '#93b89f',
+  green: '#2ee68a',
+  greenDark: '#1f8f58',
+  orange: '#f1b44c',
+  red: '#ff6b6b',
+  cyan: '#55d6be'
+}
+
+const tooltipStyle = {
+  backgroundColor: 'rgba(7, 18, 12, 0.94)',
+  borderColor: chartPalette.line,
+  textStyle: { color: chartPalette.text }
+}
+
+const axisStyle = {
+  axisLine: { lineStyle: { color: chartPalette.line } },
+  axisTick: { lineStyle: { color: chartPalette.line } },
+  axisLabel: { color: chartPalette.muted },
+  splitLine: { lineStyle: { color: 'rgba(23, 63, 42, 0.72)' } },
+  nameTextStyle: { color: chartPalette.muted }
+}
+
 // 模拟的月度数据
 const monthData = ref([
   { month: '1月', sales: 42000, users: 3200 },
@@ -226,27 +259,33 @@ const initCharts = () => {
     mainChartInstance = echarts.init(mainChart.value)
   }
   const mainOption = {
+    backgroundColor: 'transparent',
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'shadow' }
+      axisPointer: { type: 'shadow' },
+      ...tooltipStyle
     },
     legend: {
-      data: ['销售额', '用户数']
+      data: ['销售额', '用户数'],
+      textStyle: { color: chartPalette.muted }
     },
     xAxis: {
       type: 'category',
-      data: monthData.value.map(item => item.month)
+      data: monthData.value.map(item => item.month),
+      ...axisStyle
     },
     yAxis: [
       {
         type: 'value',
         name: '销售额(元)',
-        position: 'left'
+        position: 'left',
+        ...axisStyle
       },
       {
         type: 'value',
         name: '用户数',
-        position: 'right'
+        position: 'right',
+        ...axisStyle
       }
     ],
     series: [
@@ -255,7 +294,7 @@ const initCharts = () => {
         type: chartType.value,
         data: monthData.value.map(item => item.sales),
         itemStyle: {
-          color: '#36a3f7'
+          color: chartPalette.green
         }
       },
       {
@@ -264,10 +303,12 @@ const initCharts = () => {
         yAxisIndex: 1,
         data: monthData.value.map(item => item.users),
         itemStyle: {
-          color: '#34c38f'
-        }
+          color: chartPalette.cyan
+        },
+        lineStyle: { color: chartPalette.cyan }
       }
-    ]
+    ],
+    grid: { top: 52, bottom: 40, left: 64, right: 64 }
   }
   mainChartInstance.setOption(mainOption)
 
@@ -276,11 +317,14 @@ const initCharts = () => {
     pieChartInstance = echarts.init(pieChart.value)
   }
   const pieOption = {
-    tooltip: { trigger: 'item' },
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'item', ...tooltipStyle },
+    color: [chartPalette.green, chartPalette.greenDark, chartPalette.cyan, chartPalette.orange, '#7aa58b'],
     legend: {
       orient: 'vertical',
       left: 'left',
-      top: 'center'
+      top: 'center',
+      textStyle: { color: chartPalette.muted }
     },
     series: [
       {
@@ -297,7 +341,7 @@ const initCharts = () => {
           itemStyle: {
             shadowBlur: 10,
             shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
+            shadowColor: 'rgba(46, 230, 138, 0.28)'
           }
         }
       }
@@ -310,16 +354,19 @@ const initCharts = () => {
     weekChartInstance = echarts.init(weekChart.value)
   }
   const weekOption = {
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'axis', ...tooltipStyle },
     xAxis: {
       type: 'category',
-      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+      ...axisStyle
     },
-    yAxis: { type: 'value' },
+    yAxis: { type: 'value', ...axisStyle },
     series: [
       {
         data: [120, 200, 150, 80, 70, 110, 130],
         type: 'bar',
-        itemStyle: { color: '#f1b44c' }
+        itemStyle: { color: chartPalette.green }
       }
     ],
     grid: { top: 20, bottom: 20, left: 40, right: 20 }
@@ -331,12 +378,15 @@ const initCharts = () => {
     lineChartInstance = echarts.init(lineChart.value)
   }
   const lineOption = {
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'axis', ...tooltipStyle },
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: ['9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
+      data: ['9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+      ...axisStyle
     },
-    yAxis: { type: 'value' },
+    yAxis: { type: 'value', ...axisStyle },
     series: [
       {
         data: [820, 932, 901, 934, 1290, 1330, 1320, 1100, 920],
@@ -344,11 +394,11 @@ const initCharts = () => {
         smooth: true,
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(54, 163, 247, 0.3)' },
-            { offset: 1, color: 'rgba(54, 163, 247, 0.1)' }
+            { offset: 0, color: 'rgba(46, 230, 138, 0.28)' },
+            { offset: 1, color: 'rgba(46, 230, 138, 0.04)' }
           ])
         },
-        lineStyle: { color: '#36a3f7' }
+        lineStyle: { color: chartPalette.green }
       }
     ],
     grid: { top: 20, bottom: 20, left: 40, right: 20 }
@@ -401,22 +451,61 @@ onMounted(() => {
 
 <style scoped>
 .chart-dashboard {
-  padding: 20px;
-  background-color: #f5f7fa;
-  min-height: 100%;
+  min-height: calc(100vh - 120px);
+  padding: 22px;
+  color: #d7ffe7;
+  background: #07120c;
 }
 
-.dashboard-header {
+.chart-dashboard__hero,
+.stat-card,
+.chart-card {
+  border: 1px solid #173f2a;
+  background: #0d1c13;
+}
+
+.chart-dashboard__hero {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
   margin-bottom: 20px;
 }
 
-.dashboard-header h2 {
+.chart-dashboard__eyebrow {
+  margin: 0 0 8px;
+  color: #2ee68a;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+.chart-dashboard__title {
   margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #333;
+  color: #f1fff6;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.chart-dashboard__desc {
+  margin: 10px 0 0;
+  color: #93b89f;
+}
+
+.chart-dashboard__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.time-select {
+  width: 200px;
+}
+
+.chart-dashboard__button {
+  border-color: #2ee68a;
+  color: #07120c;
+  background: #2ee68a;
 }
 
 .stat-card {
@@ -426,6 +515,7 @@ onMounted(() => {
 .stat-content {
   display: flex;
   align-items: center;
+  height: 100%;
 }
 
 .stat-icon {
@@ -436,18 +526,40 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   margin-right: 15px;
+  color: #07120c;
+  font-size: 24px;
+}
+
+.stat-icon--user {
+  background: #2ee68a;
+}
+
+.stat-icon--order {
+  background: #55d6be;
+}
+
+.stat-icon--revenue {
+  background: #f1b44c;
+}
+
+.stat-icon--rate {
+  background: #ff6b6b;
 }
 
 .stat-number {
   font-size: 24px;
   font-weight: 700;
-  color: #333;
+  color: #f1fff6;
   line-height: 1.2;
+}
+
+.stat-number--revenue {
+  color: #f1b44c;
 }
 
 .stat-title {
   font-size: 14px;
-  color: #666;
+  color: #93b89f;
   margin-top: 4px;
 }
 
@@ -455,17 +567,104 @@ onMounted(() => {
   height: 100%;
 }
 
+.chart-card :deep(.el-card__header),
+.stat-card :deep(.el-card__header) {
+  border-bottom-color: #173f2a;
+}
+
+.chart-card :deep(.el-card__body),
+.stat-card :deep(.el-card__body) {
+  background: #0d1c13;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: #f1fff6;
+  font-weight: 700;
 }
 
 .el-table {
   font-size: 14px;
 }
 
+.chart-dashboard :deep(.el-input__wrapper),
+.chart-dashboard :deep(.el-select__wrapper) {
+  background: #07120c;
+  box-shadow: 0 0 0 1px #173f2a inset;
+}
+
+.chart-dashboard :deep(.el-input__wrapper:hover),
+.chart-dashboard :deep(.el-select__wrapper:hover) {
+  box-shadow: 0 0 0 1px #2ee68a inset;
+}
+
+.chart-dashboard :deep(.el-input__inner),
+.chart-dashboard :deep(.el-select__placeholder),
+.chart-dashboard :deep(.el-select__selected-item) {
+  color: #d7ffe7;
+}
+
+.chart-dashboard :deep(.el-radio-button__inner) {
+  border-color: #173f2a;
+  color: #93b89f;
+  background: #07120c;
+}
+
+.chart-dashboard :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  border-color: #2ee68a;
+  color: #07120c;
+  background: #2ee68a;
+  box-shadow: -1px 0 0 0 #2ee68a;
+}
+
+.chart-dashboard :deep(.el-table__inner-wrapper),
+.chart-dashboard :deep(.el-table__body),
+.chart-dashboard :deep(.el-table__header),
+.chart-dashboard :deep(.el-table__body-wrapper),
+.chart-dashboard :deep(.el-scrollbar__view),
+.chart-dashboard :deep(th.el-table__cell),
+.chart-dashboard :deep(td.el-table__cell) {
+  background: #0d1c13;
+}
+
+.chart-dashboard :deep(.el-table__inner-wrapper::before),
+.chart-dashboard :deep(.el-table__border-left-patch) {
+  background-color: #173f2a;
+}
+
+.chart-dashboard :deep(th.el-table__cell),
+.chart-dashboard :deep(td.el-table__cell) {
+  border-bottom-color: #173f2a;
+  color: #d7ffe7;
+}
+
+.chart-dashboard :deep(.el-table__row:hover > td.el-table__cell) {
+  background: #102817;
+}
+
 .el-table :deep(.cell) {
   padding: 8px 12px;
+}
+
+.trend-up {
+  color: #2ee68a;
+}
+
+.trend-down {
+  color: #ff6b6b;
+}
+
+@media (max-width: 1200px) {
+  .chart-dashboard__hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .chart-dashboard__actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
 }
 </style>

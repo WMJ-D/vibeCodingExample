@@ -12,9 +12,9 @@
           :collapse="isCollapse"
           :collapse-transition="false"
           router
-          background-color="#304156"
-          text-color="#bfcbd9"
-          active-text-color="#409eff"
+          background-color="#0d1c13"
+          text-color="#93b89f"
+          active-text-color="#2ee68a"
         >
           <el-menu-item index="/dashboard">
             <el-icon><HomeFilled /></el-icon>
@@ -126,7 +126,20 @@
         </el-header>
 
         <el-main class="main-content">
-          <router-view />
+          <router-view v-slot="{ Component, route }">
+            <keep-alive>
+              <component
+                :is="Component"
+                v-if="route.meta.keepAlive"
+                :key="route.name || route.path"
+              />
+            </keep-alive>
+            <component
+              :is="Component"
+              v-if="!route.meta.keepAlive"
+              :key="route.name || route.path"
+            />
+          </router-view>
         </el-main>
       </el-container>
     </el-container>
@@ -157,12 +170,22 @@ function handleCommand(cmd) {
   height: 100vh;
 }
 .aside {
-  background-color: #304156;
+  background-color: #0d1c13;
   overflow-y: auto;
   transition: width 0.3s;
 }
 .aside::-webkit-scrollbar {
-  width: 0;
+  width: 6px;
+}
+.aside::-webkit-scrollbar-track {
+  background: #07120c;
+}
+.aside::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #1f8f58;
+}
+.aside::-webkit-scrollbar-thumb:hover {
+  background: #2ee68a;
 }
 .logo {
   height: 50px;
@@ -172,7 +195,8 @@ function handleCommand(cmd) {
   color: #fff;
   font-size: 18px;
   font-weight: bold;
-  background-color: #263445;
+  background-color: #07120c;
+  border-bottom: 1px solid #173f2a;
   gap: 8px;
 }
 .logo-text {
@@ -182,8 +206,8 @@ function handleCommand(cmd) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #eee;
+  background: #0d1c13;
+  border-bottom: 1px solid #173f2a;
   padding: 0 20px;
   height: 50px;
 }
@@ -195,20 +219,43 @@ function handleCommand(cmd) {
 .collapse-btn {
   font-size: 20px;
   cursor: pointer;
-  color: #333;
+  color: #93b89f;
 }
 .collapse-btn:hover {
-  color: #409eff;
+  color: #2ee68a;
 }
 .user-info {
   display: flex;
   align-items: center;
   cursor: pointer;
-  color: #333;
+  color: #d7ffe7;
 }
 .main-content {
-  background: #f0f2f5;
+  background: #07120c;
   padding: 20px;
   overflow-y: auto;
+}
+
+:deep(.el-menu) {
+  border-right-color: #173f2a;
+}
+
+:deep(.el-menu-item.is-active) {
+  background-color: #102817;
+}
+
+:deep(.el-menu-item:hover),
+:deep(.el-sub-menu__title:hover) {
+  background-color: #102817;
+  color: #2ee68a;
+}
+
+:deep(.el-breadcrumb__inner),
+:deep(.el-breadcrumb__separator) {
+  color: #93b89f;
+}
+
+:deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
+  color: #d7ffe7;
 }
 </style>

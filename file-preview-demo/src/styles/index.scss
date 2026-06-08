@@ -1,9 +1,31 @@
 // import dark theme
 @use 'element-plus/theme-chalk/src/dark/css-vars.scss' as *;
 
-// :root {
-//   --ep-color-primary: red;
-// }
+:root {
+  --el-color-primary: #2ee68a;
+  --el-color-primary-light-3: #71efae;
+  --el-color-primary-light-5: #97f4c6;
+  --el-color-primary-light-7: #c0f8dd;
+  --el-color-primary-light-8: #d5fae9;
+  --el-color-primary-light-9: #eafdf4;
+  --el-color-primary-dark-2: #25b86e;
+  --el-color-success: #2ee68a;
+  --el-color-success-light-9: #eafdf4;
+  --ep-color-primary: #2ee68a;
+  --ep-color-primary-light-9: #eafdf4;
+}
+
+:root.dark {
+  --el-color-primary: #2ee68a;
+  --el-color-primary-light-3: #1f8f58;
+  --el-color-primary-light-5: #176b43;
+  --el-color-primary-light-7: #104b30;
+  --el-color-primary-light-8: #0c3624;
+  --el-color-primary-light-9: #071f15;
+  --el-color-primary-dark-2: #71efae;
+  --ep-color-primary: #2ee68a;
+  --ep-color-primary-light-9: #071f15;
+}
 
 body {
   font-family:
@@ -14,15 +36,56 @@ body {
   margin: 0;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2ee68a #07120c;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #07120c;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid #07120c;
+  border-radius: 999px;
+  background: #1f8f58;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #2ee68a;
+}
+
+*::-webkit-scrollbar-corner {
+  background: #07120c;
+}
+
+.el-scrollbar__bar {
+  right: 4px;
+  bottom: 4px;
+}
+
+.el-scrollbar__thumb {
+  background-color: rgba(46, 230, 138, 0.55);
+}
+
+.el-scrollbar__thumb:hover {
+  background-color: rgba(46, 230, 138, 0.9);
+}
+
 a {
-  color: var(--ep-color-primary);
+  color: var(--el-color-primary);
 }
 
 code {
   border-radius: 2px;
   padding: 2px 4px;
-  background-color: var(--ep-color-primary-light-9);
-  color: var(--ep-color-primary);
+  background-color: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
 }
 
 #nprogress {
@@ -30,7 +93,7 @@ code {
 }
 
 #nprogress .bar {
-  background: rgb(13, 148, 136);
+  background: #2ee68a;
   opacity: 0.75;
   position: fixed;
   z-index: 1031;

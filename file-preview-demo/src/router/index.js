@@ -13,7 +13,7 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: () => import('@/views/login/Login.vue'),
-    meta: { title: '登录' },
+    meta: { title: '登录', keepAlive: false },
   },
   {
     path: '/my-map',
@@ -113,6 +113,19 @@ const routes = [
     ],
   },
 ]
+
+function applyDefaultRouteCache(routeList) {
+  routeList.forEach(route => {
+    if (route.name && route.meta?.keepAlive !== false) {
+      route.meta = { ...route.meta, keepAlive: true }
+    }
+    if (route.children?.length) {
+      applyDefaultRouteCache(route.children)
+    }
+  })
+}
+
+applyDefaultRouteCache(routes)
 
 const router = createRouter({
   history: createWebHashHistory(),

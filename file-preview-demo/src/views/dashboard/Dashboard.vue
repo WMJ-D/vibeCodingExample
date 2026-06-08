@@ -258,7 +258,7 @@ import { useExtensionDownload } from '@/composables/useExtensionDownload'
 
 /* ---------- 统计卡片 ---------- */
 const stats = [
-  { title: '用户总数', value: '1,280', icon: 'User', color: '#409eff' },
+  { title: '用户总数', value: '1,280', icon: 'User', color: '#2ee68a' },
   { title: '角色数量', value: '12', icon: 'UserFilled', color: '#67c23a' },
   { title: '菜单数量', value: '36', icon: 'Menu', color: '#e6a23c' },
   { title: '今日访问', value: '892', icon: 'View', color: '#f56c6c' },
@@ -451,8 +451,8 @@ onUnmounted(() => clearInterval(timer))
   transition: background-color 0.15s, color 0.15s;
 
   &:hover {
-    background: #ecf5ff;
-    color: #409eff;
+    background: #eafdf4;
+    color: #25b86e;
   }
 
   &__icon {
@@ -507,7 +507,7 @@ onUnmounted(() => clearInterval(timer))
 }
 
 .bookmarks-item.is-active {
-  background: #ecf5ff;
-  border-left: 3px solid #409eff;
+  background: #eafdf4;
+  border-left: 3px solid #2ee68a;
 }
 </style>

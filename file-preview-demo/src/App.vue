@@ -7,7 +7,20 @@
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
 <template>
-  <router-view />
+  <router-view v-slot="{ Component, route }">
+    <keep-alive>
+      <component
+        :is="Component"
+        v-if="route.meta.keepAlive"
+        :key="route.name || route.path"
+      />
+    </keep-alive>
+    <component
+      :is="Component"
+      v-if="!route.meta.keepAlive"
+      :key="route.name || route.path"
+    />
+  </router-view>
 </template>
 
 <style>
@@ -22,7 +35,7 @@ body {
   font-size: 14px;
   line-height: 1.5;
   color: #333;
-  background-color: #fff;
+  background-color: #07120c;
 }
 
 #app {
