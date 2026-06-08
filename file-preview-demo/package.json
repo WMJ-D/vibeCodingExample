@@ -11,6 +11,7 @@
     "@antv/l7": "^2.22.6",
     "@antv/l7-maps": "^2.22.6",
     "@element-plus/icons-vue": "^2.3.0",
+    "@flyfish-group/file-viewer3": "^1.0.20",
     "echarts": "^6.0.0",
     "element-plus": "^2.8.0",
     "vue": "^3.4.0",
