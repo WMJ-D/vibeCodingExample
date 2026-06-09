@@ -105,6 +105,12 @@ const routes = [
         meta: { title: '局域网视频', icon: 'VideoCamera' },
       },
       {
+        path: 'agent/knowledge',
+        name: 'KnowledgeAgent',
+        component: () => import('@/views/agent/KnowledgeAgent.vue'),
+        meta: { title: '知识库智能体', icon: 'Cpu' },
+      },
+      {
         path: 'config/editor',
         name: 'ConfigEditor',
         component: () => import('@/views/config/ConfigEditor.vue'),

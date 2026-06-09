@@ -94,6 +94,17 @@
               <template #title>局域网视频</template>
             </el-menu-item>
           </el-sub-menu>
+
+          <el-sub-menu index="/agent">
+            <template #title>
+              <el-icon><Cpu /></el-icon>
+              <span>智能体应用</span>
+            </template>
+            <el-menu-item index="/agent/knowledge">
+              <el-icon><ChatDotRound /></el-icon>
+              <template #title>知识库智能体</template>
+            </el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-aside>
 
