@@ -93,6 +93,10 @@
               <el-icon><VideoCamera /></el-icon>
               <template #title>局域网视频</template>
             </el-menu-item>
+            <el-menu-item index="/demo/my-cesium">
+              <el-icon><Location /></el-icon>
+              <template #title>我的 Cesium</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="/agent">

@@ -105,6 +105,12 @@ const routes = [
         meta: { title: '局域网视频', icon: 'VideoCamera' },
       },
       {
+        path: 'demo/my-cesium',
+        name: 'MyCesium',
+        component: () => import('@/views/demo/MyCesium.vue'),
+        meta: { title: '我的 Cesium', icon: 'Location', keepAlive: false },
+      },
+      {
         path: 'agent/knowledge',
         name: 'KnowledgeAgent',
         component: () => import('@/views/agent/KnowledgeAgent.vue'),
