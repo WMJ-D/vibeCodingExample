@@ -54,21 +54,31 @@ const loading = ref(true)
 const error = ref('')
 const roamRunning = ref(false)
 const roamPaused = ref(false)
+const BOUNDARY_DATA_URL = 'https://mdn.alipayobjects.com/antforest/afts/file/A*vaL-R4SU18IAAAAAgCAAAAgAerd2AQ/original_2025-11-14.json'
+
 const layerVisible = reactive({
   tdt: true,
+  tdtAnno: true,
+  tdtVec: false,
+  tdtVecAnno: false,
   building: true,
-  hubeiTile: true,
-  volumeCloud: true,
+  hubeiTile: false,
+  volumeCloud: false,
   heatmap: false,
-  point: true,
+  point: false,
+  boundary: false,
 })
 const layerOptions = [
   { key: 'tdt', label: '天地图影像' },
+  { key: 'tdtAnno', label: '影像注记' },
+  { key: 'tdtVec', label: '天地图矢量' },
+  { key: 'tdtVecAnno', label: '矢量注记' },
   { key: 'building', label: '中地大楼' },
   { key: 'hubeiTile', label: '湖北省图层' },
   { key: 'volumeCloud', label: '体积云' },
   { key: 'heatmap', label: '热力图' },
   { key: 'point', label: '点标注' },
+  { key: 'boundary', label: '行政区划线' },
 ]
 const defaultVolumeCloudControls = {
   show: true,
@@ -114,12 +124,19 @@ let viewer = null
 let animation = null
 let circleWave = null
 let tdtLayer = null
+let tdtAnnoLayer = null
+let tdtVecLayer = null
+let tdtVecAnnoLayer = null
 let buildingLayer = null
 let volumeCloud = null
 let hubeiTileLayer = null
 let heatMap = null
 let graphicsLayer = null
 let pointGraphic = null
+let boundaryGraphicsLayer = null
+let boundaryLabelLayer = null
+let boundaryEntities = []
+let selectedFeature = null
 
 function assertCesiumGlobals() {
   if (!window.Cesium) throw new Error('缺少全局 Cesium，请确认 index.html 已引入 Cesium 脚本')
@@ -149,6 +166,20 @@ function initViewer() {
   viewer.scene.globe.showGroundAtmosphere = false
   bindRenderErrorHandler()
   viewer.showPosition?.()
+
+  sceneView.on('click', function (event) {
+    if (!boundaryEntities.length) return
+    const coords = event.mapPoint?.coordinates
+    if (!coords) return
+    const [lng, lat] = coords
+    const hit = boundaryEntities.find(f => pointInPolygon(lng, lat, f._allRings))
+    if (!hit) return
+    if (selectedFeature && selectedFeature !== hit) {
+      selectedFeature.symbol = selectedFeature._defaultSymbol
+    }
+    hit.symbol = hit._highlightSymbol
+    selectedFeature = hit
+  })
 }
 
 function bindRenderErrorHandler() {
@@ -169,6 +200,36 @@ function addTDT() {
     tokenValue: window.getTDTToken?.() || '',
   })
   map.add(tdtLayer)
+}
+
+function addTDTAnno() {
+  if (tdtAnnoLayer) return
+  tdtAnnoLayer = new window.zondy.layer.WMTSLayer({
+    url: 'http://t6.tianditu.gov.cn/cia_c/wmts',
+    tokenKey: 'tk',
+    tokenValue: window.getTDTToken?.() || '',
+  })
+  map.add(tdtAnnoLayer)
+}
+
+function addTDTVec() {
+  if (tdtVecLayer) return
+  tdtVecLayer = new window.zondy.layer.WMTSLayer({
+    url: 'http://t6.tianditu.gov.cn/vec_c/wmts',
+    tokenKey: 'tk',
+    tokenValue: window.getTDTToken?.() || '',
+  })
+  map.add(tdtVecLayer)
+}
+
+function addTDTVecAnno() {
+  if (tdtVecAnnoLayer) return
+  tdtVecAnnoLayer = new window.zondy.layer.WMTSLayer({
+    url: 'http://t6.tianditu.gov.cn/cva_c/wmts',
+    tokenKey: 'tk',
+    tokenValue: window.getTDTToken?.() || '',
+  })
+  map.add(tdtVecAnnoLayer)
 }
 
 function addZondyBuilding() {
@@ -379,6 +440,139 @@ function removeVolumeCloud() {
   volumeCloud = null
 }
 
+async function addBoundaryLayer() {
+  if (boundaryEntities.length) return
+  try {
+    const resp = await fetch(BOUNDARY_DATA_URL)
+    const geojson = await resp.json()
+    const features = geojson?.features || []
+    const { GraphicsLayer } = window.zondy.layer
+    const { Feature, Color } = window.zondy
+    const { MultiPolygon } = window.zondy.geometry
+    const { SimpleFillSymbol, SimpleLineSymbol } = window.zondy.symbol
+    const Cesium = window.Cesium
+
+    boundaryGraphicsLayer = new GraphicsLayer({ graphics: [] })
+    map.add(boundaryGraphicsLayer)
+
+    boundaryLabelLayer = new window.zondy.cesium.GraphicsLayer(viewer, {})
+
+    const defaultSymbol = new SimpleFillSymbol({
+      color: new Color(0, 0, 0, 0),
+      outline: new SimpleLineSymbol({
+        color: new Color(84, 131, 239, 1),
+        width: 2,
+      }),
+    })
+    const highlightSymbol = new SimpleFillSymbol({
+      color: new Color(84, 131, 239, 0.45),
+      outline: new SimpleLineSymbol({
+        color: new Color(255, 47, 109, 1),
+        width: 3,
+      }),
+    })
+
+    for (const feat of features) {
+      const geom = feat.geometry
+      if (!geom) continue
+      const coords = geom.type === 'MultiPolygon' ? geom.coordinates
+        : geom.type === 'Polygon' ? [geom.coordinates]
+        : []
+      if (!coords.length) continue
+      const multiPolygon = new MultiPolygon({ coordinates: coords })
+      const feature = new Feature({
+        geometry: multiPolygon,
+        symbol: defaultSymbol,
+        attributes: feat.properties || {},
+      })
+      feature._defaultSymbol = defaultSymbol
+      feature._highlightSymbol = highlightSymbol
+      feature._allRings = coords
+      boundaryGraphicsLayer.add(feature)
+      boundaryEntities.push(feature)
+
+      const name = feat.properties?.name
+      if (name) {
+        const center = getPolygonCentroid(coords)
+        if (center) {
+          const label = new window.zondy.cesium.Graphic({
+            type: 'label',
+            positions: [Cesium.Cartesian3.fromDegrees(center[0], center[1], 0)],
+            style: {
+              text: name,
+              font: '16px 微软雅黑',
+              fillColor: Cesium.Color.WHITE,
+              style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+              outlineColor: Cesium.Color.fromCssColorString('#0d1932'),
+              outlineWidth: 3,
+              offsetHeight: 200,
+            },
+          })
+          boundaryLabelLayer.addGraphic(label)
+        }
+      }
+    }
+  } catch (e) {
+    console.error('行政区划加载失败', e)
+  }
+}
+
+function getPolygonCentroid(polygons) {
+  let totalArea = 0
+  let cx = 0
+  let cy = 0
+  for (const rings of polygons) {
+    const ring = rings?.[0]
+    if (!ring || ring.length < 3) continue
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i]
+      const [xj, yj] = ring[j]
+      const a = xi * yj - xj * yi
+      totalArea += a
+      cx += (xi + xj) * a
+      cy += (yi + yj) * a
+    }
+  }
+  if (totalArea === 0) return null
+  totalArea *= 0.5
+  cx /= 6 * totalArea
+  cy /= 6 * totalArea
+  return [cx, cy]
+}
+
+function pointInPolygon(lng, lat, polygons) {
+  for (const rings of polygons) {
+    const ring = rings?.[0]
+    if (!ring) continue
+    let inside = false
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i]
+      const [xj, yj] = ring[j]
+      if ((yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
+        inside = !inside
+      }
+    }
+    if (inside) return true
+  }
+  return false
+}
+
+function removeBoundaryLayer() {
+  if (boundaryGraphicsLayer) {
+    for (const f of boundaryEntities) {
+      boundaryGraphicsLayer.remove(f)
+    }
+    map?.remove(boundaryGraphicsLayer)
+    boundaryGraphicsLayer = null
+  }
+  if (boundaryLabelLayer) {
+    boundaryLabelLayer.destroy?.()
+    boundaryLabelLayer = null
+  }
+  boundaryEntities = []
+  selectedFeature = null
+}
+
 function removeMapLayer(layer) {
   if (!layer) return
   if (map?.remove) {
@@ -395,6 +589,18 @@ function toggleLayer(key) {
   if (key === 'tdt') {
     if (visible) addTDT()
     else { removeMapLayer(tdtLayer); tdtLayer = null }
+  }
+  if (key === 'tdtAnno') {
+    if (visible) addTDTAnno()
+    else { removeMapLayer(tdtAnnoLayer); tdtAnnoLayer = null }
+  }
+  if (key === 'tdtVec') {
+    if (visible) addTDTVec()
+    else { removeMapLayer(tdtVecLayer); tdtVecLayer = null }
+  }
+  if (key === 'tdtVecAnno') {
+    if (visible) addTDTVecAnno()
+    else { removeMapLayer(tdtVecAnnoLayer); tdtVecAnnoLayer = null }
   }
   if (key === 'building') {
     if (visible) addZondyBuilding()
@@ -416,6 +622,10 @@ function toggleLayer(key) {
     if (visible) addPoint()
     else removePoint()
   }
+  if (key === 'boundary') {
+    if (visible) addBoundaryLayer()
+    else removeBoundaryLayer()
+  }
 }
 
 function flyToBuilding() {
@@ -431,11 +641,15 @@ async function init() {
     assertCesiumGlobals()
     initViewer()
     if (layerVisible.tdt) addTDT()
+    if (layerVisible.tdtAnno) addTDTAnno()
+    if (layerVisible.tdtVec) addTDTVec()
+    if (layerVisible.tdtVecAnno) addTDTVecAnno()
     if (layerVisible.building) addZondyBuilding()
     if (layerVisible.hubeiTile) addHubeiTile()
     if (layerVisible.volumeCloud) initVolumeCloud()
     if (layerVisible.heatmap) addHeatMap()
     if (layerVisible.point) addPoint()
+    if (layerVisible.boundary) addBoundaryLayer()
     initAnimation()
     if (!layerVisible.hubeiTile) flyToBuilding()
   } catch (err) {
@@ -453,10 +667,14 @@ onMounted(() => {
 onBeforeUnmount(() => {
   stopRoaming()
   removeVolumeCloud()
+  removeBoundaryLayer()
   removeMapLayer(hubeiTileLayer)
   removeHeatMap()
   removePoint()
   removeMapLayer(buildingLayer)
+  removeMapLayer(tdtVecAnnoLayer)
+  removeMapLayer(tdtVecLayer)
+  removeMapLayer(tdtAnnoLayer)
   removeMapLayer(tdtLayer)
   if (viewer) {
     try { viewer.destroy() } catch {}
@@ -465,6 +683,9 @@ onBeforeUnmount(() => {
   sceneView = null
   map = null
   tdtLayer = null
+  tdtAnnoLayer = null
+  tdtVecLayer = null
+  tdtVecAnnoLayer = null
   buildingLayer = null
   hubeiTileLayer = null
   volumeCloud = null
@@ -555,11 +776,15 @@ onBeforeUnmount(() => {
 }
 
 .legend-dot--tdt { background: #64a8ff; }
+.legend-dot--tdtAnno { background: #ffcf48; }
+.legend-dot--tdtVec { background: #48d6ff; }
+.legend-dot--tdtVecAnno { background: #a8ff48; }
 .legend-dot--building { background: #5ec49a; }
 .legend-dot--hubeiTile { background: #f2cf66; }
 .legend-dot--volumeCloud { background: linear-gradient(135deg, #f5fbff, #91b8d8); }
 .legend-dot--heatmap { background: linear-gradient(90deg, #004cff, #ffe600, #ff3b1f); }
 .legend-dot--point { background: #00ffff; border: 1px solid #fff; }
+.legend-dot--boundary { background: #5483ef; box-shadow: 0 0 6px rgba(84, 131, 239, 0.6); }
 
 .cesium-loading {
   position: absolute;
