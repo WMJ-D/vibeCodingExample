@@ -97,6 +97,10 @@
               <el-icon><Location /></el-icon>
               <template #title>我的 Cesium</template>
             </el-menu-item>
+            <el-menu-item index="/demo/angry-birds">
+              <el-icon><Promotion /></el-icon>
+              <template #title>愤怒的小鸟</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="/agent">

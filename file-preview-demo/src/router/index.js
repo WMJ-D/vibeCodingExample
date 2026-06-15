@@ -111,6 +111,12 @@ const routes = [
         meta: { title: '我的 Cesium', icon: 'Location', keepAlive: false },
       },
       {
+        path: 'demo/angry-birds',
+        name: 'AngryBirds',
+        component: () => import('@/views/demo/AngryBirds.vue'),
+        meta: { title: '愤怒的小鸟', icon: 'Promotion', keepAlive: false },
+      },
+      {
         path: 'agent/knowledge',
         name: 'KnowledgeAgent',
         component: () => import('@/views/agent/KnowledgeAgent.vue'),
