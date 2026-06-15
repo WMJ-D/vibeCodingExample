@@ -6,7 +6,7 @@
 
 ## 1. 项目概述
 
-**file-preview-demo** 是一个基于 Vue 3 + Vite + Element Plus 构建的后台管理系统 Demo，采用纯前端架构，所有数据均为模拟数据。项目涵盖登录鉴权、系统管理（用户/角色/菜单/组织/参数）、日志管理、文件预览示例、列表页示例和数据大屏可视化等典型后台功能。
+**file-preview-demo** 是一个基于 Vue 3 + Vite + Element Plus 构建的后台管理系统 Demo，采用纯前端架构 + Node.js 后端服务。项目涵盖登录鉴权、系统管理（用户/角色/菜单/组织/参数）、日志管理、文件预览示例、列表页示例、数据大屏可视化、WebRTC 局域网通信、L7/Cesium 地图可视化、AI 知识库智能体等典型后台功能。
 
 ---
 
@@ -20,8 +20,13 @@
 | 图标 | @element-plus/icons-vue | ^2.3.0 | 全局注册所有图标组件 |
 | 路由 | Vue Router | ^4.6.4 | Hash 模式 (`createWebHashHistory`) |
 | 图表 | ECharts | ^6.0.0 | 数据大屏可视化 |
+| 地图 2D | @antv/l7 + @antv/l7-maps | ^2.22.6 | 行政边界可视化（GaodeMap） |
+| 地图 3D | zondy SDK + Cesium | 外部引入 | 三维地图、模型加载、漫游 |
+| 文件预览 | @flyfish-group/file-viewer3 | ^1.0.20 | 多格式文件预览（可选） |
+| Office 解析 | mammoth + word-extractor + officeparser | — | 文档内容提取 |
 | CSS 预处理 | Sass-embedded | ^1.98.0 | SCSS，全局注入 Element Plus 主题变量 |
 | Vue 编译 | @vitejs/plugin-vue | ^5.0.0 | Vite Vue SFC 编译 |
+| 后端框架 | Express | ^4.22.2 | 知识库 API 服务 |
 
 ---
 
@@ -34,19 +39,44 @@ file-preview-demo/
 ├── vite.config.js                     # Vite 配置：别名、SCSS 全局注入、开发服务器
 ├── package-lock.json                  # 依赖锁文件
 ├── PROJECT_STRUCTURE.md               # 项目结构说明（已有文档）
+├── ARCHITECTURE.md                    # 代码架构文档
+│
+├── chrome-extension/                  # Chrome 扩展（书签 & 标签页助手）
+│   ├── manifest.json                  #   Manifest V3 配置
+│   ├── background.js                  #   Service Worker
+│   ├── content.js                     #   Content Script（注入页面）
+│   ├── popup.html                     #   Popup 弹窗 HTML
+│   └── popup.js                       #   Popup 弹窗逻辑
+│
+├── server/                            # 知识库后端服务（Express）
+│   ├── index.js                       #   服务入口，路由定义
+│   ├── documentService.js             #   文档服务：扫描、检索、总结、对话
+│   ├── vectorIndex.js                 #   向量索引：本地哈希 + 余弦相似度
+│   ├── llmService.js                  #   LLM 调用：OpenAI 兼容 API
+│   ├── storage.js                     #   JSON 文件存储
+│   ├── data/                          #   数据目录（运行时生成）
+│   └── README.md                      #   后端服务说明
+│
+├── public/                            # 静态资源
+│   └── chrome-extension/              #   Chrome 扩展文件（供下载）
 │
 └── src/
     ├── main.js                        # 应用入口：创建 Vue 实例，注册插件
     ├── App.vue                        # 根组件：仅包含 <router-view />，全局基础样式
     │
     ├── router/
-    │   └── index.js                   # 路由配置 + 登录拦截守卫
+    │   └── index.js                   # 路由配置 + 登录拦截守卫 + keepAlive 默认开启
     │
     ├── layout/
-    │   └── AdminLayout.vue            # 后台布局：侧边栏 + 顶栏 + 内容区
+    │   └── AdminLayout.vue            # 后台布局：侧边栏 + 顶栏 + 内容区 + keep-alive
+    │
+    ├── composables/                   # Composable 函数
+    │   ├── useBookmarkParser.js       #   书签解析纯函数（HTML 解析、搜索过滤）
+    │   ├── useBookmarkStore.js        #   书签数据状态管理（扩展/HTML 双数据源）
+    │   └── useExtensionDownload.js    #   Chrome 扩展打包下载（纯原生 ZIP 生成）
     │
     ├── components/                    # 功能示例组件
-    │   ├── FilePreview.vue            # 多类型文件预览（拖拽上传 + 浏览器端预览）
+    │   ├── FilePreview.vue            # 多类型文件预览（FlyFish + 基础兜底）
     │   ├── ListPage.vue               # 标准 CRUD 列表页（搜索 + 表格 + 分页 + 弹窗）
     │   └── ChartDashboard.vue         # 数据大屏（ECharts 多图表 + 统计卡片 + TopN）
     │
@@ -54,16 +84,24 @@ file-preview-demo/
     │   ├── login/
     │   │   └── Login.vue              # 登录页（表单验证 + Mock 登录）
     │   ├── dashboard/
-    │   │   └── Dashboard.vue          # 首页仪表盘（统计卡片 + 系统信息）
+    │   │   └── Dashboard.vue          # 首页仪表盘（统计卡片 + 系统信息 + 书签展示）
+    │   ├── MyMap.vue                  # 我的地图（L7 行政边界可视化）
     │   ├── system/                    # 系统管理模块
-    │   │   ├── UserManage.vue         # 用户管理（CRUD + 状态开关 + 密码重置）
-    │   │   ├── RoleManage.vue         # 角色管理（CRUD + 权限分配树）
-    │   │   ├── MenuManage.vue         # 菜单管理（树形表格 + 三种类型：M/C/F）
-    │   │   ├── OrgManage.vue          # 组织管理（树形表格 + 展开/折叠）
-    │   │   └── ParamManage.vue        # 参数管理（键值对 + 系统/自定义分类）
+    │   │   ├── UserManage.vue         #   用户管理（CRUD + 状态开关 + 密码重置）
+    │   │   ├── RoleManage.vue         #   角色管理（CRUD + 权限分配树）
+    │   │   ├── MenuManage.vue         #   菜单管理（树形表格 + 三种类型：M/C/F）
+    │   │   ├── OrgManage.vue          #   组织管理（树形表格 + 展开/折叠）
+    │   │   └── ParamManage.vue        #   参数管理（键值对 + 系统/自定义分类）
     │   ├── log/                       # 日志模块
-    │   │   ├── OperationLog.vue       # 操作日志（批量删除 + 导出 + 时间范围筛选）
-    │   │   └── LoginLog.vue           # 登录日志（IP/地点/浏览器/OS + 批量删除）
+    │   │   ├── OperationLog.vue       #   操作日志（批量删除 + 导出 + 时间范围筛选）
+    │   │   └── LoginLog.vue           #   登录日志（IP/地点/浏览器/OS + 批量删除）
+    │   ├── demo/                      # 功能示例
+    │   │   ├── LanTransfer.vue        #   局域网互传（WebRTC P2P 文件传输）
+    │   │   ├── LanVideo.vue           #   局域网视频（WebRTC 视频推流）
+    │   │   ├── MyCesium.vue           #   我的 Cesium（三维地图 + 漫游）
+    │   │   └── ex.md                  #   Cesium 示例代码参考
+    │   ├── agent/                     # 智能体应用
+    │   │   └── KnowledgeAgent.vue     #   知识库智能体（文件管理 + 搜索 + 对话 + 总结）
     │   └── config/
     │       └── ConfigEditor.vue       # 配置编辑器（iframe 嵌入外部页面）
     │
@@ -139,9 +177,14 @@ file-preview-demo/
 | `/system/param` | ParamManage.vue | 参数管理 | 键值对 |
 | `/log/operation` | OperationLog.vue | 操作日志 | 批量操作 |
 | `/log/login` | LoginLog.vue | 登录日志 | 登录审计 |
+| `/my-map` | MyMap.vue | 我的地图 | L7 行政边界可视化 |
 | `/demo/file-preview` | FilePreview.vue | 文件预览 | 功能示例 |
 | `/demo/list-page` | ListPage.vue | 列表示例 | 功能示例 |
 | `/demo/chart-dashboard` | ChartDashboard.vue | 数据大屏 | 图表展示 |
+| `/demo/lan-transfer` | LanTransfer.vue | 局域网互传 | WebRTC P2P 文件传输 |
+| `/demo/lan-video` | LanVideo.vue | 局域网视频 | WebRTC 视频推流 |
+| `/demo/my-cesium` | MyCesium.vue | 我的 Cesium | 三维地图可视化 |
+| `/agent/knowledge` | KnowledgeAgent.vue | 知识库智能体 | AI 知识库管理 |
 | `/config/editor` | ConfigEditor.vue | 配置编辑器 | iframe |
 
 - 路由模式：**Hash**（`createWebHashHistory`），兼容性好，无需服务端配置
@@ -316,6 +359,66 @@ App.vue
 - 使用 `ElMessageBox.confirm` 做删除二次确认
 - 纯 Composition API（`<script setup>`）
 
+#### MyMap.vue（我的地图）
+
+```
+功能：
+1. 基于 @antv/l7 + 高德底图渲染中国行政边界
+2. 四种图层：行政区划填色、边界线、未定边界虚线、墙体效果
+3. 图例控制面板，支持单击切换图层显隐
+4. 点击区块显示名称与编号（LayerPopup）
+5. 行政区、边界线与未定边界按属性拆分渲染
+```
+
+- 技术栈：`@antv/l7` + `@antv/l7-maps`（GaodeMap）
+- 数据源：支付宝 AntForest 提供的中国行政边界 GeoJSON
+- 响应式：`ResizeObserver` 监听容器变化，自动调用 `scene.resize()`
+
+#### LanTransfer.vue（局域网互传）
+
+```
+功能：
+1. 基于 WebRTC DataChannel 的 P2P 文件传输
+2. 手动信令交换：创建 Offer → 复制给对端 → 导入 Answer
+3. 文件切片传输（16KB/片），支持进度条
+4. 传输状态卡片：连接状态、传输进度、速度
+5. 支持多文件传输
+```
+
+- 纯前端实现，数据不经过服务器
+- 使用 `RTCDataChannel` 的 `binaryType: 'arraybuffer'`
+- 文件元信息通过 JSON 序列化传递
+
+#### LanVideo.vue（局域网视频）
+
+```
+功能：
+1. 基于 WebRTC 的实时视频推流
+2. A 端打开摄像头生成 Offer，B 端导入 Offer 后实时查看
+3. 本地/远程双画面预览
+4. 连接状态实时显示
+5. 手动信令交换（与 LanTransfer 相同模式）
+```
+
+- 使用 `getUserMedia` 获取摄像头流
+- `RTCPeerConnection` 的 `ontrack` 事件接收远端视频
+- 支持 `playsinline` 适配移动端
+
+#### MyCesium.vue（我的 Cesium）
+
+```
+功能：
+1. 基于 zondy SDK + Cesium 的三维地图可视化
+2. 多图层控制：天地图影像/矢量、中地大楼模型、湖北省图层、体积云、热力图、点标注、行政区划线
+3. 路径漫游：开始/暂停/停止，支持循环动画
+4. 动态圆特效跟随漫游位置
+5. 漫游路径点数组（世界坐标）
+```
+
+- 使用 `zondy.Map` + `zondy.cesium.SceneView` 初始化
+- 天地图 WMTS 服务作为底图
+- M3D 模型加载中地大楼
+
 #### ChartDashboard.vue（数据大屏）
 
 ```
@@ -342,6 +445,76 @@ App.vue
 - `window.addEventListener('resize')` 响应式调整图表大小
 - 数字格式化：`formatNumber()` ≥10000 显示为"万"
 
+#### KnowledgeAgent.vue（知识库智能体）
+
+```
+布局结构：
+┌──────────────────────────────────────────────────────────────┐
+│ 顶栏：知识库目录路径 + 保存 + 刷新索引                        │
+├──────────────────────────────────────────────────────────────┤
+│ 统计卡片：文件数、已索引、知识片段、查询次数                   │
+├──────────┬─────────────────────────┬─────────────────────────┤
+│ 文件管理 │ 检索/对话/总结（Tabs）   │ AI 配置                 │
+│ 280px    │ flex: 1                 │ 300px                   │
+│          │                         │                         │
+│ 文件列表 │ 知识搜索：关键词/语义    │ API Base URL            │
+│ 搜索过滤 │ AI 对话：流式输出        │ API Key                 │
+│ 类型筛选 │ 智能总结：选文件/全库    │ 对话模型                │
+│ 批量操作 │                         │ Embedding 模型          │
+│ 导入文件 │                         │ Temperature             │
+│          │                         │ 上下文长度              │
+└──────────┴─────────────────────────┴─────────────────────────┘
+```
+
+- 文件管理：支持 `.md/.pdf/.ppt/.pptx/.doc/.docx` 导入
+- 知识搜索：关键词模式 + 语义模式，返回相关度评分
+- AI 对话：支持"仅基于知识库"模式，流式输出（SSE）
+- 智能总结：可选当前已选文件或整个知识库
+- AI 配置：支持 OpenAI 兼容 API，可测试连接
+- 数据持久化：`localStorage` 存储配置
+
+#### 后端服务（server/）
+
+```
+Express 服务，端口 8787（可通过 KNOWLEDGE_AGENT_PORT 环境变量配置）
+
+API 接口：
+├── GET  /api/health                  # 健康检查
+├── POST /api/knowledge/folder        # 设置知识库目录并扫描索引
+├── POST /api/knowledge/refresh       # 重新扫描当前知识库目录
+├── GET  /api/knowledge/files         # 查询文件列表
+├── POST /api/knowledge/files/text    # 新增 Markdown 文档
+├── POST /api/knowledge/files/upload  # 上传文件到知识库
+├── DELETE /api/knowledge/files/:id   # 删除文件和索引
+├── GET  /api/knowledge/search        # 知识库检索（关键词）
+├── POST /api/knowledge/search        # 知识库检索（POST）
+├── POST /api/knowledge/summary       # 智能总结
+├── POST /api/knowledge/summary/stream # 流式智能总结（SSE）
+├── POST /api/chat                    # 知识库对话
+├── POST /api/chat/stream             # 流式知识库对话（SSE）
+├── GET  /api/config                  # 查询 AI 配置
+├── PUT  /api/config                  # 保存 AI 配置
+└── POST /api/config/test             # 测试 AI 连接
+```
+
+- 数据存储：`server/data/knowledge-db.json`（知识库数据）+ `server/data/vector-index.json`（向量索引）
+- 向量检索：本地哈希向量 + 余弦相似度，支持切换真实 Embedding 模型
+- LLM 调用：OpenAI 兼容的 `/chat/completions` 接口
+
+#### Chrome 扩展（chrome-extension/）
+
+```
+Manifest V3 扩展，功能：
+├── 读取浏览器书签树
+├── 获取当前标签页列表
+├── 通过 content script 注入数据到管理后台页面
+└── 支持 popup 弹窗查看书签和标签页
+```
+
+- 权限：`bookmarks`、`tabs`、`scripting`
+- 通信方式：`window.postMessage` 与页面 content script 交互
+- 数据流：扩展 → content script → 页面 `useBookmarkStore` composable
+
 ---
 
 ## 6. 数据流
@@ -364,8 +537,10 @@ App.vue
 |------|------|------|
 | 组件内部 | `ref` / `reactive` / `computed` | 表格数据、表单、loading |
 | 父子通信 | Props（路由 meta）+ Events | AdminLayout → 子路由（通过 router-view） |
-| 跨组件共享 | `localStorage` | `admin_token`（登录态） |
+| 跨组件共享 | `localStorage` | `admin_token`、`knowledge_agent_config`、`knowledge_agent_folder` |
 | 路由参数 | `useRoute()` + `router.push()` | 页面跳转传参 |
+| Composable 复用 | `useXxx()` 函数 | `useBookmarkStore`、`useBookmarkParser`、`useExtensionDownload` |
+| 后端通信 | REST API + SSE 流式 | 知识库服务 `server/` |
 
 ### 6.3 典型数据流示例（用户管理 CRUD）
 
@@ -411,8 +586,29 @@ AdminLayout.vue
 Login.vue → vue (ref, reactive) + vue-router (useRouter) + element-plus (ElMessage)
 
 Dashboard.vue → vue (ref, onMounted, onUnmounted)
+             → composables/useBookmarkStore (书签数据)
+             → composables/useExtensionDownload (扩展下载)
+
+MyMap.vue → @antv/l7 (Scene, PolygonLayer, LineLayer, LayerPopup)
+         → @antv/l7-maps (GaodeMap)
+
+LanTransfer.vue → vue (ref, reactive, computed)
+               → WebRTC API (RTCPeerConnection, RTCDataChannel)
+
+LanVideo.vue → vue (ref, reactive, computed)
+             → WebRTC API (RTCPeerConnection, getUserMedia)
+
+MyCesium.vue → vue (ref, reactive, onMounted, onBeforeUnmount)
+             → zondy SDK (zondy.Map, zondy.cesium.SceneView)
+             → Cesium (全局)
+
+KnowledgeAgent.vue → vue (ref, reactive, computed)
+                  → element-plus (ElMessage)
+                  → marked (Markdown 渲染)
+                  → REST API (fetch)
 
 FilePreview.vue → @element-plus/icons-vue (UploadFilled)
+               → @flyfish-group/file-viewer3 (可选)
 
 ListPage.vue → vue (ref, reactive, computed, nextTick, onMounted)
              → element-plus (ElMessage, ElMessageBox)
@@ -423,6 +619,19 @@ ChartDashboard.vue → echarts (* as echarts)
 
 所有管理视图 → vue (ref, reactive, computed, nextTick, onMounted)
              → element-plus (ElMessage, ElMessageBox)
+
+composables/
+├── useBookmarkParser.js → 纯函数（无依赖）
+├── useBookmarkStore.js  → vue (ref, reactive, computed) + useBookmarkParser
+└── useExtensionDownload.js → vue (ref)
+
+server/
+├── express
+├── documentService.js → fs, path, vectorIndex, llmService, storage
+├── vectorIndex.js → 本地哈希向量 + 余弦相似度
+├── llmService.js → fetch (OpenAI 兼容 API)
+├── storage.js → fs (JSON 文件读写)
+└── index.js → express, documentService
 ```
 
 ### 7.2 Element Plus 使用方式：全量引入
@@ -444,9 +653,11 @@ SCSS 变量覆盖（`vite.config.js` → `css.preprocessorOptions.scss.additiona
 
 | 风格 | 使用的文件 |
 |------|-----------|
-| `<script setup>` Composition API | AdminLayout, Dashboard, ListPage, ChartDashboard, Login, 所有 system/ 和 log/ 视图 |
+| `<script setup>` Composition API | AdminLayout, Dashboard, ListPage, ChartDashboard, Login, 所有 system/ 和 log/ 视图, MyMap, LanTransfer, LanVideo, MyCesium, KnowledgeAgent |
 | Options API (`export default { }`) | FilePreview.vue（唯一例外） |
 | 纯模板（无逻辑） | ConfigEditor.vue |
+| Composable 函数 | useBookmarkParser, useBookmarkStore, useExtensionDownload |
+| Node.js CommonJS | server/ 目录下所有文件 |
 
 ### 8.2 常见模式
 
@@ -486,6 +697,7 @@ await new Promise(r => setTimeout(r, 300))  // 模拟网络延迟
 
 ```bash
 npm run dev     # Vite 开发服务器 → http://localhost:5173
+npm run server  # 知识库后端服务 → http://localhost:8787
 ```
 
 ### 9.2 生产构建
@@ -514,6 +726,8 @@ npm run preview # vite preview → 本地预览构建产物
 5. **无错误处理**：所有模拟操作无 catch 错误处理分支
 6. **OrgManage 树形搜索未实现**：`filteredData` 是 identity computed，搜索框实际不生效
 7. **未使用 TypeScript**：项目为纯 JavaScript 项目
+8. **MyCesium 依赖内网服务**：中地大楼模型和湖北省图层 URL 指向内网 `10.10.130.72`，外部无法访问
+9. **知识库后端无鉴权**：`server/` API 无身份验证，局域网内任何人可访问
 
 ### 10.2 改进建议
 
@@ -524,6 +738,9 @@ npm run preview # vite preview → 本地预览构建产物
 5. 按需引入 Element Plus 组件（`unplugin-element-plus`）减小打包体积
 6. 添加错误边界和统一的错误处理机制
 7. 增加环境变量配置支持（`.env.development` / `.env.production`）
+8. 知识库后端添加 JWT 鉴权中间件
+9. WebRTC 信令交换增加 WebSocket 自动化方案（减少手动复制粘贴）
+10. Cesium 场景增加更多交互功能（测量、标注、图层叠加分析）
 
 ---
 
@@ -531,12 +748,16 @@ npm run preview # vite preview → 本地预览构建产物
 
 | 指标 | 数值 |
 |------|------|
-| 源文件总数（不含 node_modules） | 19 |
-| Vue SFC 组件 | 15 |
-| JS 配置文件 | 4（main.js, router/index.js, vite.config.js, package.json） |
+| 源文件总数（不含 node_modules） | 30+ |
+| Vue SFC 组件 | 22 |
+| JS 配置/工具文件 | 8（main.js, router/index.js, vite.config.js, package.json, 3 composables, 4 server） |
 | SCSS 样式文件 | 3 |
 | HTML 入口 | 1 |
-| Markdown 文档 | 1（PROJECT_STRUCTURE.md） |
-| 总代码行数（估算） | ~2500 行 |
-| 路由数量 | 14 |
+| Chrome 扩展文件 | 5 |
+| Markdown 文档 | 4（ARCHITECTURE.md, PROJECT_STRUCTURE.md, server/README.md, ex.md） |
+| 总代码行数（估算） | ~6000 行 |
+| 路由数量 | 18 |
 | ECharts 图表实例 | 4 |
+| 后端 API 接口 | 15 |
+| WebRTC 功能模块 | 2（文件传输 + 视频推流） |
+| 地图可视化模块 | 2（L7 行政边界 + Cesium 三维） |
