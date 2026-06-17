@@ -101,6 +101,10 @@
               <el-icon><Promotion /></el-icon>
               <template #title>愤怒的小鸟</template>
             </el-menu-item>
+            <el-menu-item index="/demo/vr-demo">
+              <el-icon><VideoCamera /></el-icon>
+              <template #title>VR演示</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="/agent">
