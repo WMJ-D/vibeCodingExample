@@ -754,7 +754,7 @@ npm run preview # vite preview → 本地预览构建产物
 | SCSS 样式文件 | 3 |
 | HTML 入口 | 1 |
 | Chrome 扩展文件 | 5 |
-| Markdown 文档 | 4（ARCHITECTURE.md, PROJECT_STRUCTURE.md, server/README.md, ex.md） |
+| Markdown 文档 | 3（ARCHITECTURE.md, server/README.md, ex.md） |
 | 总代码行数（估算） | ~6000 行 |
 | 路由数量 | 18 |
 | ECharts 图表实例 | 4 |

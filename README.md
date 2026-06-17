@@ -79,8 +79,7 @@ vibeCodingExample/
    ├─ index.html
    ├─ package.json
    ├─ vite.config.js
-   ├─ ARCHITECTURE.md              # 代码架构文档
-   └─ PROJECT_STRUCTURE.md         # 项目结构说明
+   └─ ARCHITECTURE.md              # 代码架构文档
 ```
 
 ## 核心功能说明
