@@ -117,6 +117,12 @@ const routes = [
         meta: { title: '愤怒的小鸟', icon: 'Promotion', keepAlive: false },
       },
       {
+        path: 'demo/vr-demo',
+        name: 'VRDemo',
+        component: () => import('@/views/demo/VRDemo.vue'),
+        meta: { title: 'VR演示', icon: 'VideoCamera', keepAlive: false },
+      },
+      {
         path: 'agent/knowledge',
         name: 'KnowledgeAgent',
         component: () => import('@/views/agent/KnowledgeAgent.vue'),
