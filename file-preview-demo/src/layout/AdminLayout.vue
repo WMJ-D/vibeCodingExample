@@ -105,6 +105,10 @@
               <el-icon><VideoCamera /></el-icon>
               <template #title>VR演示</template>
             </el-menu-item>
+            <el-menu-item index="/demo/minecraft">
+              <el-icon><Box /></el-icon>
+              <template #title>我的世界</template>
+            </el-menu-item>
           </el-sub-menu>
 
           <el-sub-menu index="/agent">

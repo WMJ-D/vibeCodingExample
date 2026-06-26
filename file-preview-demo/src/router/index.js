@@ -123,6 +123,12 @@ const routes = [
         meta: { title: 'VR演示', icon: 'VideoCamera', keepAlive: false },
       },
       {
+        path: 'demo/minecraft',
+        name: 'MineCraft',
+        component: () => import('@/views/demo/MineCraft.vue'),
+        meta: { title: '我的世界', icon: 'Box', keepAlive: false },
+      },
+      {
         path: 'agent/knowledge',
         name: 'KnowledgeAgent',
         component: () => import('@/views/agent/KnowledgeAgent.vue'),
