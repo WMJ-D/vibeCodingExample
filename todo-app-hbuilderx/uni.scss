@@ -1,0 +1,75 @@
+/**
+ * uni.scss — 全局 SCSS 变量
+ * 基于设计稿 colors_and_type.css 转换
+ * rpx 换算: 设计稿375px宽 → 1px = 2rpx
+ */
+
+/* — 品牌色系 — */
+$color-primary: #34D399;
+$color-primary-hover: #6EE7B7;
+$color-primary-muted: rgba(52, 211, 153, 0.15);
+$color-primary-soft: rgba(52, 211, 153, 0.08);
+
+/* — 深灰背景层级 — */
+$bg-base: #1A1A1E;
+$bg-surface: #222226;
+$bg-elevated: #2A2A2F;
+$bg-overlay: rgba(0, 0, 0, 0.5);
+
+/* — 文字层级 — */
+$text-primary: #F5F5F7;
+$text-secondary: #A1A1AA;
+$text-tertiary: #63636E;
+$text-inverse: #1A1A1E;
+
+/* — 边框 — */
+$border-subtle: rgba(255, 255, 255, 0.06);
+$border-medium: rgba(255, 255, 255, 0.1);
+$border-strong: rgba(255, 255, 255, 0.15);
+
+/* — 状态色 — */
+$state-success: #34D399;
+$state-warning: #FBBF24;
+$state-error: #F87171;
+$state-info: #60A5FA;
+
+/* — 优先级色 — */
+$priority-high: #F87171;
+$priority-medium: #FBBF24;
+$priority-low: #60A5FA;
+
+/* — 圆角 (px → rpx) — */
+$radius-sm: 12rpx;
+$radius-md: 20rpx;
+$radius-lg: 28rpx;
+$radius-xl: 32rpx;
+$radius-full: 9999rpx;
+
+/* — 阴影 — */
+$shadow-card: 0 4rpx 24rpx rgba(0, 0, 0, 0.25);
+$shadow-elevated: 0 8rpx 40rpx rgba(0, 0, 0, 0.35);
+$shadow-cta: 0 8rpx 32rpx rgba(52, 211, 153, 0.3);
+
+/* — 字号 (px → rpx) — */
+$text-xs: 22rpx;
+$text-sm: 26rpx;
+$text-base: 30rpx;
+$text-lg: 34rpx;
+$text-xl: 40rpx;
+$text-2xl: 48rpx;
+$text-3xl: 56rpx;
+
+/* — 字重 — */
+$font-regular: 400;
+$font-medium: 500;
+$font-semibold: 600;
+$font-bold: 700;
+
+/* — 间距 (px → rpx) — */
+$space-xs: 8rpx;
+$space-sm: 16rpx;
+$space-md: 24rpx;
+$space-lg: 32rpx;
+$space-xl: 40rpx;
+$space-2xl: 48rpx;
+$space-3xl: 64rpx;
