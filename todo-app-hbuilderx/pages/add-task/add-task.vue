@@ -6,14 +6,12 @@
 				<text class="back-icon">‹</text>
 			</view>
 			<text class="nav-title">新建待办</text>
-			<SystemCapsule />
 		</view>
 
-		<!-- 可滚动表单 -->
-		<scroll-view scroll-y class="form-scroll">
+		<!-- 表单区域（使用原生 page 滚动，避免 scroll-view 高度问题导致 input 无法聚焦） -->
+		<view class="form-scroll">
 			<!-- 任务标题输入 -->
-			<input class="title-input" type="text" placeholder="输入任务标题..."
-				v-model="title" :placeholder-style="'color: #63636E'" />
+			<input class="title-input" placeholder="输入任务标题..." v-model="title"  />
 
 			<!-- 日期与时间卡片 -->
 			<view class="form-card">
@@ -72,7 +70,7 @@
 					<text class="reminder-text">提前15分钟提醒</text>
 				</view>
 			</view>
-		</scroll-view>
+		</view>
 
 		<!-- 底部保存按钮 -->
 		<view class="save-bar">
@@ -219,9 +217,11 @@
 	.page {
 		min-height: 100vh;
 		background: #1A1A1E;
+		overflow: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 
-	/* 导航栏 */
+	/* 导航栏 - 加上顶部安全区 */
 	.nav-bar {
 		position: sticky;
 		top: 0;
@@ -229,8 +229,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		height: 104rpx;
+		min-height: 104rpx;
 		padding: 0 32rpx;
+		padding-top: env(safe-area-inset-top);
+		padding-top: constant(safe-area-inset-top);
 		background: #1A1A1E;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 	}
@@ -242,9 +244,13 @@
 		height: 72rpx;
 		border-radius: 20rpx;
 	}
+	.nav-back:active {
+		background: rgba(255, 255, 255, 0.06);
+	}
 	.back-icon {
 		font-size: 44rpx;
 		color: #F5F5F7;
+		line-height: 1;
 	}
 	.nav-title {
 		font-size: 34rpx;
@@ -255,23 +261,25 @@
 		transform: translateX(-50%);
 	}
 
-	/* 表单区域 */
+	/* 表单区域 - 底部留出保存栏空间 */
 	.form-scroll {
-		padding: 40rpx 32rpx 200rpx;
-		height: calc(100vh - 104rpx);
+		padding: 32rpx 32rpx 220rpx;
+		box-sizing: border-box;
 	}
 
 	/* 标题输入 */
 	.title-input {
 		width: 100%;
 		background: #222226;
-		border: 3rpx solid rgba(255, 255, 255, 0.1);
+		border: 2rpx solid rgba(255, 255, 255, 0.1);
 		border-radius: 24rpx;
 		padding: 32rpx;
-		font-size: 40rpx;
+		font-size: 36rpx;
 		font-weight: 600;
 		color: #F5F5F7;
-		margin-bottom: 40rpx;
+		margin-bottom: 32rpx;
+		box-sizing: border-box;
+		height:40rpx;
 	}
 
 	/* 通用卡片 */
@@ -281,7 +289,7 @@
 		border: 1px solid rgba(255, 255, 255, 0.06);
 		box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.25);
 		padding: 32rpx;
-		margin-bottom: 32rpx;
+		margin-bottom: 28rpx;
 	}
 	.card-label {
 		font-size: 26rpx;
@@ -297,7 +305,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 24rpx 0;
+		padding: 20rpx 0;
+	}
+	.date-time-row:active {
+		opacity: 0.7;
 	}
 	.date-time-row + .date-time-row {
 		border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -318,6 +329,7 @@
 	}
 	.icon-emoji {
 		font-size: 36rpx;
+		line-height: 1;
 	}
 	.row-text {
 		font-size: 30rpx;
@@ -325,8 +337,9 @@
 		color: #F5F5F7;
 	}
 	.row-arrow {
-		font-size: 32rpx;
+		font-size: 36rpx;
 		color: #63636E;
+		line-height: 1;
 	}
 
 	/* 标签列表 */
@@ -341,9 +354,13 @@
 		font-size: 28rpx;
 		font-weight: 500;
 		background: transparent;
-		border: 3rpx solid rgba(255, 255, 255, 0.1);
+		border: 2rpx solid rgba(255, 255, 255, 0.1);
 		color: #A1A1AA;
 		transition: all 0.2s;
+		line-height: 1.2;
+	}
+	.tag-item:active {
+		opacity: 0.7;
 	}
 	.tag-item.selected {
 		background: #34D399;
@@ -366,8 +383,11 @@
 		padding: 28rpx 16rpx;
 		border-radius: 24rpx;
 		background: #2A2A2F;
-		border: 3rpx solid rgba(255, 255, 255, 0.06);
+		border: 2rpx solid rgba(255, 255, 255, 0.06);
 		transition: all 0.2s;
+	}
+	.priority-item:active {
+		opacity: 0.8;
 	}
 	.priority-item.selected {
 		border-color: #34D399;
@@ -418,8 +438,8 @@
 		background: white;
 		border-radius: 50%;
 		position: absolute;
-		top: 4rpx;
-		left: 4rpx;
+		top: 5rpx;
+		left: 5rpx;
 		transition: transform 0.2s;
 		box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.2);
 	}
@@ -436,21 +456,25 @@
 	}
 	.reminder-icon {
 		font-size: 28rpx;
+		line-height: 1;
 	}
 	.reminder-text {
 		font-size: 28rpx;
 		color: #A1A1AA;
 	}
 
-	/* 底部保存按钮 */
+	/* 底部保存按钮 - 适配底部安全区，不拦截上层点击 */
 	.save-bar {
 		position: fixed;
 		bottom: 0;
 		left: 0;
 		right: 0;
-		padding: 32rpx 32rpx 40rpx;
-		background: linear-gradient(to bottom, transparent 0%, #1A1A1E 30%);
+		padding: 24rpx 32rpx;
+		padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+		padding-bottom: calc(24rpx + constant(safe-area-inset-bottom));
+		background: linear-gradient(to bottom, rgba(26, 26, 30, 0) 0%, #1A1A1E 30%);
 		z-index: 100;
+		pointer-events: none;
 	}
 	.save-btn {
 		display: flex;
@@ -464,8 +488,13 @@
 		font-weight: 600;
 		border-radius: 32rpx;
 		box-shadow: 0 8rpx 32rpx rgba(52, 211, 153, 0.3);
+		pointer-events: auto;
 	}
 	.save-btn:active {
 		transform: scale(0.98);
+		opacity: 0.9;
+	}
+	.uni-input-wrapper{
+		height: 100% !important;
 	}
 </style>

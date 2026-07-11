@@ -1,0 +1,90 @@
+# ============================================
+# .gitignore — 待办清单项目 (uni-app + HBuilderX)
+# ============================================
+
+# ---------- 依赖 / node_modules ----------
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ---------- 构建产物 ----------
+unpackage/
+dist/
+build/
+.output/
+.nuxt/
+
+# ---------- 编辑器 / IDE ----------
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+Desktop.ini
+.hbuilderx/
+
+# ---------- 日志与调试 ----------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------- 环境变量 / 配置（含敏感信息）----------
+.env
+.env.local
+.env.*.local
+*.env
+
+# ---------- 临时文件 ----------
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+.cache/
+
+# ---------- 操作系统文件 ----------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ---------- uni-app 特定 ----------
+# 小程序编译缓存
+unpackage/dist/dev/mp-weixin/
+unpackage/dist/build/mp-weixin/
+unpackage/dist/dev/mp-alipay/
+unpackage/dist/build/mp-alipay/
+unpackage/dist/dev/mp-baidu/
+unpackage/dist/build/mp-baidu/
+unpackage/dist/dev/mp-toutiao/
+unpackage/dist/build/mp-toutiao/
+unpackage/dist/dev/quickapp-webview/
+unpackage/dist/build/quickapp-webview/
+unpackage/dist/dev/quickapp-webview-huawei/
+unpackage/dist/build/quickapp-webview-huawei/
+unpackage/dist/dev/app-plus/
+unpackage/dist/build/app-plus/
+unpackage/dist/dev/h5/
+unpackage/dist/build/h5/
+
+# HBuilderX 运行时
+.hbuilderx/
+
+# ---------- 本地存储数据（如需忽略）----------
+# uni.storage 模拟数据等
+# *.local.json
+
+# ---------- 文档（可选，按需取消注释）----------
+ 项目技术文档.md

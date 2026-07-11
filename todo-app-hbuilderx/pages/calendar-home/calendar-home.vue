@@ -3,7 +3,6 @@
 		<!-- 1. 顶部状态栏 -->
 		<view class="status-bar">
 			<text class="status-bar__date">{{ statusBarDate }}</text>
-			<SystemCapsule />
 		</view>
 
 		<!-- 2. 日历区域 -->
@@ -21,8 +20,8 @@
 				<view class="month-nav__btn" @tap="nextMonth">›</view>
 			</view>
 
-			<!-- 星期标题 -->
-			<view class="calendar-weekdays">
+			<!-- 星期标题（仅月视图显示） -->
+			<view v-if="calendarMode === 'month'" class="calendar-weekdays">
 				<text v-for="(w, i) in weekdays" :key="i" class="weekday">{{ w }}</text>
 			</view>
 
@@ -207,8 +206,8 @@
 			},
 			groupedTasks() {
 				const tasks = state.tasks
-					.filter(t => t.date === this.selectedDate)
-					.sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+						.filter(t => t.date === this.selectedDate)
+						.sort((a, b) => (a.time || '').localeCompare(b.time || ''))
 				const morning = tasks.filter(t => parseInt((t.time || '00:00').split(':')[0]) < 12)
 				const afternoon = tasks.filter(t => parseInt((t.time || '00:00').split(':')[0]) >= 12)
 				return { morning, afternoon }
@@ -263,16 +262,21 @@
 	.page {
 		min-height: 100vh;
 		background: #1A1A1E;
-		padding-bottom: 200rpx;
+		/* 底部留出 TabBar 高度 + 安全区 */
+		padding-bottom: calc(180rpx + env(safe-area-inset-bottom));
+		padding-bottom: calc(180rpx + constant(safe-area-inset-bottom));
 	}
+
 
 	/* ===== 1. 状态栏 ===== */
 	.status-bar {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 24rpx 40rpx 0;
-		height: 88rpx;
+		/* 顶部留出状态栏 + 安全区 */
+		padding: calc(24rpx + env(safe-area-inset-top)) 40rpx 0;
+		padding: calc(24rpx + constant(safe-area-inset-top)) 40rpx 0;
+		min-height: 88rpx;
 	}
 	.status-bar__date {
 		font-size: 26rpx;
@@ -281,13 +285,14 @@
 		letter-spacing: 0.6rpx;
 	}
 
+
 	/* ===== 2. 日历区域 ===== */
 	.calendar-section {
-		padding: 32rpx 40rpx 0;
+		padding: 24rpx 40rpx 0;
 	}
 	.calendar-tabs {
 		display: flex;
-		margin-bottom: 40rpx;
+		margin-bottom: 32rpx;
 		background: #222226;
 		border-radius: 20rpx;
 		padding: 6rpx;
@@ -296,7 +301,7 @@
 	}
 	.calendar-tab {
 		padding: 12rpx 40rpx;
-		border-radius: 12rpx;
+		border-radius: 14rpx;
 		font-size: 26rpx;
 		font-weight: 500;
 		color: #63636E;
@@ -318,13 +323,23 @@
 	}
 	.month-nav__btn {
 		font-size: 40rpx;
-		color: #63636E;
-		padding: 8rpx 16rpx;
+		color: #A1A1AA;
+		width: 64rpx;
+		height: 64rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+	}
+	.month-nav__btn:active {
+		background: rgba(255, 255, 255, 0.06);
 	}
 	.month-nav__label {
-		font-size: 28rpx;
+		font-size: 30rpx;
 		font-weight: 600;
 		color: #F5F5F7;
+		min-width: 200rpx;
+		text-align: center;
 	}
 
 	/* 星期标题 */
@@ -339,6 +354,7 @@
 		font-weight: 500;
 		color: #63636E;
 		padding: 8rpx 0;
+		text-align: center;
 	}
 
 	/* 日历网格 */
@@ -348,14 +364,21 @@
 		gap: 4rpx;
 	}
 	.calendar-day {
+		/* 用 aspect-ratio 保证正圆，避免不同屏幕宽度下变形 */
+		aspect-ratio: 1 / 1;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		height: 88rpx;
 		position: relative;
 		border-radius: 50%;
 		transition: all 0.15s;
+		max-width: 88rpx;
+		margin: 0 auto;
+		width: 100%;
+	}
+	.calendar-day:active {
+		transform: scale(0.92);
 	}
 	.calendar-day__num {
 		font-size: 26rpx;
@@ -369,17 +392,23 @@
 		border-radius: 50%;
 		background: #34D399;
 		position: absolute;
-		bottom: 8rpx;
+		bottom: 6rpx;
+		left: 50%;
+		transform: translateX(-50%);
 	}
 	.calendar-day.past .calendar-day__num {
-		color: #63636E;
+		color: #4A4A52;
 	}
 	.calendar-day.today .calendar-day__num {
 		color: #34D399;
-		font-weight: 600;
+		font-weight: 700;
+	}
+	.calendar-day.today {
+		border: 2rpx solid rgba(52, 211, 153, 0.5);
 	}
 	.calendar-day.selected {
 		background: #34D399;
+		border-color: transparent;
 	}
 	.calendar-day.selected .calendar-day__num {
 		color: #1A1A1E;
@@ -396,10 +425,15 @@
 	.week-grid {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
-		gap: 4rpx;
+		gap: 8rpx;
 	}
 	.week-grid .calendar-day {
 		height: 120rpx;
+		aspect-ratio: auto;
+		border-radius: 24rpx;
+	}
+	.week-grid .calendar-day.selected {
+		border-radius: 24rpx;
 	}
 	.weekday-label {
 		font-size: 20rpx;
@@ -407,19 +441,20 @@
 		margin-bottom: 4rpx;
 	}
 
+
 	/* ===== 3. 待办列表 ===== */
 	.todo-section {
-		padding: 48rpx 40rpx 0;
+		padding: 40rpx 40rpx 0;
 	}
 	.todo-header {
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;
-		margin-bottom: 32rpx;
+		margin-bottom: 28rpx;
 	}
 	.todo-header__title {
 		font-size: 40rpx;
-		font-weight: 600;
+		font-weight: 700;
 		color: #F5F5F7;
 	}
 	.todo-header__count {
@@ -428,15 +463,16 @@
 		color: #34D399;
 	}
 	.todo-group {
-		margin-bottom: 40rpx;
+		margin-bottom: 32rpx;
 	}
 	.todo-group__label {
 		font-size: 22rpx;
-		font-weight: 500;
+		font-weight: 600;
 		color: #63636E;
 		margin-bottom: 20rpx;
 		padding-left: 8rpx;
 		letter-spacing: 2rpx;
+		text-transform: uppercase;
 	}
 
 	/* 待办卡片 */
@@ -451,6 +487,9 @@
 		align-items: flex-start;
 		gap: 24rpx;
 	}
+	.todo-card:active {
+		transform: scale(0.99);
+	}
 	.todo-card__checkbox {
 		width: 44rpx;
 		height: 44rpx;
@@ -461,7 +500,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		margin-top: 2rpx;
+		margin-top: 4rpx;
+	}
+	.todo-card__checkbox:active {
+		transform: scale(0.9);
 	}
 	.check-icon {
 		font-size: 24rpx;
@@ -482,6 +524,9 @@
 	.todo-card.completed .todo-card__time {
 		color: #63636E;
 	}
+	.todo-card.completed {
+		opacity: 0.7;
+	}
 	.todo-card__content {
 		flex: 1;
 		min-width: 0;
@@ -497,6 +542,9 @@
 		font-weight: 500;
 		color: #F5F5F7;
 		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 	.todo-card__priority {
 		width: 16rpx;
@@ -512,10 +560,11 @@
 	}
 	.time-icon {
 		font-size: 24rpx;
+		line-height: 1;
 	}
 	.todo-card__time {
 		font-size: 22rpx;
-		color: #63636E;
+		color: #A1A1AA;
 		font-weight: 500;
 	}
 	.todo-card__tags {
@@ -527,6 +576,7 @@
 		border-radius: 9999rpx;
 		font-size: 22rpx;
 		font-weight: 500;
+		line-height: 1.2;
 	}
 
 	/* 空状态 */
@@ -534,7 +584,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		padding: 80rpx 0;
+		padding: 100rpx 0;
 		gap: 16rpx;
 	}
 	.empty-icon {
@@ -552,7 +602,8 @@
 	/* ===== 4. 浮动按钮 ===== */
 	.fab-add {
 		position: fixed;
-		bottom: 200rpx;
+		bottom: calc(200rpx + env(safe-area-inset-bottom));
+		bottom: calc(200rpx + constant(safe-area-inset-bottom));
 		right: 40rpx;
 		width: 112rpx;
 		height: 112rpx;
@@ -565,11 +616,12 @@
 		z-index: 101;
 	}
 	.fab-add:active {
-		transform: scale(0.95);
+		transform: scale(0.92);
 	}
 	.fab-icon {
 		font-size: 56rpx;
 		color: #1A1A1E;
 		font-weight: 300;
+		line-height: 1;
 	}
 </style>

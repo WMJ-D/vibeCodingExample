@@ -1,10 +1,12 @@
 /**
  * todo.js — 待办数据状态管理
  * 使用 Vue3 reactive + uni.storage 持久化
+ * 支持：任务 CRUD / 归档 / 恢复 / 删除
  */
 import { reactive } from 'vue'
 
 const STORAGE_KEY = 'todo_app_tasks'
+const ARCHIVE_KEY = 'todo_app_archived'
 
 // 标签定义
 export const TAGS = [
@@ -36,6 +38,7 @@ const seedTasks = [
 // 全局响应式状态
 export const state = reactive({
 	tasks: [],
+	archivedTasks: [],
 	selectedDate: new Date().toISOString().slice(0, 10),
 	calendarMode: 'month'
 })
@@ -50,6 +53,12 @@ export function initStore() {
 			state.tasks = [...seedTasks]
 			saveToStorage()
 		}
+
+		// 加载归档数据
+		const archived = uni.getStorageSync(ARCHIVE_KEY)
+		if (archived && archived.length > 0) {
+			state.archivedTasks = JSON.parse(archived)
+		}
 	} catch (e) {
 		state.tasks = [...seedTasks]
 	}
@@ -59,7 +68,11 @@ function saveToStorage() {
 	uni.setStorageSync(STORAGE_KEY, JSON.stringify(state.tasks))
 }
 
-// ========== 操作方法 ==========
+function saveArchived() {
+	uni.setStorageSync(ARCHIVE_KEY, JSON.stringify(state.archivedTasks))
+}
+
+// ========== 基础操作方法 ==========
 
 export function addTask(task) {
 	const newTask = {
@@ -95,4 +108,90 @@ export function setSelectedDate(date) {
 
 export function setCalendarMode(mode) {
 	state.calendarMode = mode
+}
+
+// ========== 归档相关方法 ==========
+
+/** 获取已完成但未归档的任务列表 */
+export function getCompletedTasks() {
+	return state.tasks.filter(t => t.completed).sort((a, b) => {
+		// 按日期倒序，最近完成的排前面
+		if (b.date !== a.date) return b.date.localeCompare(a.date)
+		return (b.time || '').localeCompare(a.time || '')
+	})
+}
+
+/** 获取已归档的任务列表 */
+export function getArchivedTasks() {
+	return [...state.archivedTasks].sort((a, b) => {
+		if (b.archivedAt !== a.archivedAt) return (b.archivedAt || 0) - (a.archivedAt || 0)
+		return (b.date || '').localeCompare(a.date || '')
+	})
+}
+
+/** 恢复任务（从已完成 → 未完成待办） */
+export function restoreTask(id) {
+	const task = state.tasks.find(t => t.id === id)
+	if (task) {
+		task.completed = false
+		saveToStorage()
+	}
+}
+
+/** 将已完成任务移入归档 */
+export function archiveTask(id) {
+	const idx = state.tasks.findIndex(t => t.id === id)
+	if (idx > -1) {
+		const task = state.tasks.splice(idx, 1)[0]
+		task.archivedAt = Date.now()
+		state.archivedTasks.unshift(task)
+		saveToStorage()
+		saveArchived()
+	}
+}
+
+/** 从归档恢复为已完成状态（回到活跃列表） */
+export function unarchiveTask(id) {
+	const idx = state.archivedTasks.findIndex(t => t.id === id)
+	if (idx > -1) {
+		const task = state.archivedTasks.splice(idx, 1)[0]
+		delete task.archivedAt
+		task.completed = true
+		state.tasks.unshift(task)
+		saveToStorage()
+		saveArchived()
+	}
+}
+
+/** 从活跃列表彻底删除任务 */
+export function deleteTaskPermanent(id) {
+	deleteTask(id)
+}
+
+/** 从归档列表彻底删除任务 */
+export function deleteArchivedTask(id) {
+	const idx = state.archivedTasks.findIndex(t => t.id === id)
+	if (idx > -1) {
+		state.archivedTasks.splice(idx, 1)
+		saveArchived()
+	}
+}
+
+/** 批量归档所有已完成任务，返回归档数量 */
+export function archiveAllCompleted() {
+	const completed = state.tasks.filter(t => t.completed)
+	completed.forEach(task => {
+		task.archivedAt = Date.now()
+		state.archivedTasks.unshift(task)
+	})
+	state.tasks = state.tasks.filter(t => !t.completed)
+	saveToStorage()
+	saveArchived()
+	return completed.length
+}
+
+/** 清空所有归档任务 */
+export function clearAllArchived() {
+	state.archivedTasks = []
+	saveArchived()
 }

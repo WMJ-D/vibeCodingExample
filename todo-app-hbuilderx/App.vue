@@ -12,7 +12,12 @@
 </script>
 
 <style>
-	/* 全局样式重置 */
+	/* ===== 全局样式重置 ===== */
+	/* 盒模型统一，避免 padding/border 撑破容器 */
+	*, *::before, *::after {
+		box-sizing: border-box;
+	}
+
 	page {
 		background-color: #1A1A1E;
 		color: #F5F5F7;
@@ -28,9 +33,15 @@
 		margin: 0;
 		background: none;
 		border: none;
+		line-height: normal;
 	}
 	button::after {
 		border: none;
+	}
+
+	/* 文本节点默认继承对齐 */
+	text {
+		line-height: 1.4;
 	}
 
 	/* 隐藏滚动条 */

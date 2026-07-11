@@ -55,40 +55,49 @@
 		bottom: 0;
 		left: 0;
 		right: 0;
-		height: 160rpx;
 		background: #222226;
 		border-top: 1px solid rgba(255, 255, 255, 0.06);
 		display: flex;
 		align-items: center;
 		justify-content: space-around;
-		padding-bottom: 32rpx; /* 安全区 */
+		/* 内容高度 + 底部安全区 */
+		padding: 16rpx 0 calc(16rpx + env(safe-area-inset-bottom));
+		padding: 16rpx 0 calc(16rpx + constant(safe-area-inset-bottom));
 		z-index: 100;
 	}
 	.tab-item {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 8rpx;
+		justify-content: center;
+		gap: 6rpx;
 		color: #63636E;
 		transition: color 0.2s;
+		padding: 8rpx 24rpx;
+		flex: 1;
+	}
+	.tab-item:active {
+		opacity: 0.7;
 	}
 	.tab-item.active {
 		color: #34D399;
 	}
 	/* #ifdef H5 */
 	.tab-icon {
-		width: 48rpx;
-		height: 48rpx;
+		width: 44rpx;
+		height: 44rpx;
+		display: block;
 	}
 	/* #endif */
 	/* #ifndef H5 */
 	.tab-icon-text {
-		font-size: 48rpx;
-		line-height: 48rpx;
+		font-size: 44rpx;
+		line-height: 1;
 	}
 	/* #endif */
 	.tab-label {
 		font-size: 22rpx;
 		font-weight: 500;
+		line-height: 1;
 	}
 </style>

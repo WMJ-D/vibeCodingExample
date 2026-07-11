@@ -4,9 +4,8 @@
 		<view class="page-header">
 			<view class="page-header__left">
 				<text class="page-title">数据统计</text>
-				<text class="page-subtitle">本周概览 · 6.22 - 6.28</text>
+				<text class="page-subtitle">{{ subtitleText }}</text>
 			</view>
-			<SystemCapsule />
 		</view>
 
 		<!-- 环形图卡片 -->
@@ -53,11 +52,17 @@
 			</view>
 			<view class="bar-chart-area">
 				<view class="bar-columns">
-					<view v-for="(item, i) in stats.weekData" :key="i"
+					<view v-for="(item, i) in chartData" :key="i"
 						class="bar-col" :class="{ today: item.isToday }">
-						<view class="bar" :style="{ height: (item.count / stats.maxWeek * 100) + '%' }"></view>
+						<text class="bar-count">{{ item.count }}</text>
+						<view class="bar-wrapper">
+							<view class="bar" :style="{ height: barHeight(item.count) + '%' }"></view>
+						</view>
 						<text class="bar-day-label">{{ item.label }}</text>
 					</view>
+				</view>
+				<view class="bar-footer">
+					<text class="bar-footer-text">每日完成任务数（共 {{ chartTotal }} 项）</text>
 				</view>
 			</view>
 		</view>
@@ -77,7 +82,7 @@
 		</view>
 
 		<!-- 归档入口 -->
-		<view class="archive-entry">
+		<view class="archive-entry" @tap="goArchive">
 			<text class="archive-link">查看已归档任务 ›</text>
 		</view>
 
@@ -107,7 +112,6 @@
 				const pending = all.filter(t => !t.completed).length
 				const rate = all.length > 0 ? Math.round((completed / all.length) * 100) : 0
 
-				// 按标签分组统计
 				const byTag = {}
 				TAGS.forEach(tag => {
 					const tagTasks = all.filter(t => t.tag === tag.name)
@@ -121,22 +125,82 @@
 					}
 				})
 
-				// 按星期统计（最近7天）
+				return { total: all.length, completed, pending, rate, byTag }
+			},
+
+			// ===== 周数据：最近7天 =====
+			weekData() {
+				const all = state.tasks
 				const weekLabels = ['一', '二', '三', '四', '五', '六', '日']
 				const weekData = []
 				const today = new Date()
 				for (let i = 6; i >= 0; i--) {
 					const d = new Date(today)
-					d.setDate(d.getDate() - i)
-					const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+					d.setDate(today.getDate() - i)
+					const dateStr = this.formatDate(d)
 					const count = all.filter(t => t.date === dateStr && t.completed).length
 					const dayIdx = (d.getDay() + 6) % 7
-					weekData.push({ count, label: weekLabels[dayIdx], isToday: i === 0 })
+					weekData.push({ count, label: weekLabels[dayIdx], isToday: i === 0, dateStr })
 				}
-				const maxWeek = Math.max.apply(null, weekData.map(w => w.count).concat([1]))
-
-				return { total: all.length, completed, pending, rate, byTag, weekData, maxWeek }
+				return weekData
 			},
+
+			// ===== 月数据：最近30天（按周聚合为4个柱） =====
+			monthData() {
+				const all = state.tasks
+				const today = new Date()
+				const monthData = []
+
+				for (let w = 3; w >= 0; w--) {
+					const weekStart = new Date(today)
+					weekStart.setDate(today.getDate() - (w * 7) - 6)
+					const weekEnd = new Date(today)
+					weekEnd.setDate(today.getDate() - w * 7)
+
+					let count = 0
+					for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+						const dateStr = this.formatDate(d)
+						count += all.filter(t => t.date === dateStr && t.completed).length
+					}
+
+					const label = `${weekStart.getMonth() + 1}/${weekStart.getDate()}-${weekEnd.getMonth() + 1}/${weekEnd.getDate()}`
+					monthData.push({ count, label, isToday: w === 0 })
+				}
+				return monthData
+			},
+
+			// ===== 当前图表数据（根据模式切换） =====
+			chartData() {
+				return this.chartMode === 'week' ? this.weekData : this.monthData
+			},
+
+			// ===== 图表最大值（用于归一化高度，最小基准=2） =====
+			chartMax() {
+				const counts = this.chartData.map(d => d.count)
+				const maxVal = Math.max.apply(null, counts.concat([0]))
+				return Math.max(maxVal, 2)
+			},
+
+			// ===== 图表总完成数 =====
+			chartTotal() {
+				return this.chartData.reduce((sum, d) => sum + d.count, 0)
+			},
+
+			// ===== 动态副标题 =====
+			subtitleText() {
+				if (this.chartMode === 'week') {
+					const today = new Date()
+					const start = new Date(today)
+					start.setDate(today.getDate() - 6)
+					return `本周概览 · ${this.formatShort(start)} - ${this.formatShort(today)}`
+				} else {
+					const today = new Date()
+					const start = new Date(today)
+					start.setDate(today.getDate() - 29)
+					return `近30天概览 · ${this.formatShort(start)} - ${this.formatShort(today)}`
+				}
+			},
+
 			ringDashArray() {
 				const r = 56
 				const circumference = 2 * Math.PI * r
@@ -145,11 +209,24 @@
 			}
 		},
 		onShow() {
-			// 数据自动响应
+			// store 是全局响应式，数据自动更新
 		},
 		methods: {
 			setChartMode(mode) {
 				this.chartMode = mode
+			},
+			goArchive() {
+				uni.navigateTo({ url: '/pages/archive/archive' })
+			},
+			barHeight(count) {
+				if (count === 0) return 0
+				return Math.max(Math.round((count / this.chartMax) * 100), count > 0 ? 8 : 0)
+			},
+			formatDate(d) {
+				return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+			},
+			formatShort(d) {
+				return `${d.getMonth() + 1}.${d.getDate()}`
 			}
 		}
 	}
@@ -159,12 +236,15 @@
 	.page {
 		min-height: 100vh;
 		background: #1A1A1E;
-		padding-bottom: 200rpx;
+		/* 留足 TabBar + 安全区空间，避免归档入口被遮挡 */
+		padding-bottom: calc(240rpx + env(safe-area-inset-bottom));
+		padding-bottom: calc(240rpx + constant(safe-area-inset-bottom));
 	}
 
-	/* 顶部标题 */
+	/* 顶部标题 - 加上顶部安全区 */
 	.page-header {
-		padding: 40rpx 32rpx 24rpx;
+		padding: calc(40rpx + env(safe-area-inset-top)) 32rpx 24rpx;
+		padding: calc(40rpx + constant(safe-area-inset-top)) 32rpx 24rpx;
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
@@ -188,7 +268,7 @@
 
 	/* 通用卡片 */
 	.card {
-		margin: 0 32rpx 28rpx;
+		margin: 0 32rpx 24rpx;
 		background: #222226;
 		border-radius: 28rpx;
 		border: 1px solid rgba(255, 255, 255, 0.06);
@@ -197,12 +277,33 @@
 
 	/* 环形图 */
 	.ring-card {
-		padding: 48rpx 32rpx 40rpx;
-		text-align: center;
+		padding: 40rpx 32rpx 36rpx;
+		display: flex;
+		align-items: center;
+		gap: 32rpx;
 	}
 	.ring-chart-wrapper {
 		position: relative;
-		display: inline-block;
+		flex-shrink: 0;
+		width: 140rpx;
+		height: 140rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.ring-fallback {
+		width: 140rpx;
+		height: 140rpx;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.ring-inner {
+		width: 100rpx;
+		height: 100rpx;
+		border-radius: 50%;
+		background: #222226;
 	}
 	.ring-chart-label {
 		position: absolute;
@@ -210,52 +311,35 @@
 		left: 50%;
 		transform: translate(-50%, -50%);
 		text-align: center;
+		width: 100%;
 	}
 	.percent-value {
-		font-size: 56rpx;
+		font-size: 36rpx;
 		font-weight: 700;
-		color: #F5F5F7;
-		line-height: 1;
+		color: #34D399;
 		display: block;
+		line-height: 1;
 	}
 	.percent-text {
-		font-size: 24rpx;
+		font-size: 20rpx;
 		color: #A1A1AA;
 		margin-top: 4rpx;
 		display: block;
 	}
-
-	/* 非H5环形图兜底 */
-	.ring-fallback {
-		width: 280rpx;
-		height: 280rpx;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.ring-inner {
-		width: 224rpx;
-		height: 224rpx;
-		border-radius: 50%;
-		background: #222226;
-	}
-
-	/* 环形图统计 */
 	.ring-stats {
 		display: flex;
+		gap: 40rpx;
+		flex: 1;
 		justify-content: center;
-		gap: 64rpx;
-		margin-top: 40rpx;
 	}
 	.ring-stat-item {
-		display: flex;
-		align-items: center;
-		gap: 12rpx;
+		text-align: center;
 	}
 	.stat-num {
-		font-size: 34rpx;
+		font-size: 40rpx;
 		font-weight: 700;
+		display: block;
+		line-height: 1.2;
 	}
 	.stat-num.completed {
 		color: #34D399;
@@ -264,19 +348,22 @@
 		color: #F87171;
 	}
 	.stat-label {
-		font-size: 26rpx;
+		font-size: 22rpx;
 		color: #A1A1AA;
+		margin-top: 6rpx;
+		display: block;
 	}
 
-	/* 柱状图 */
+	/* ===== 柱状图卡片 ===== */
 	.bar-card {
-		padding: 32rpx;
+		padding: 32rpx 28rpx 24rpx;
 	}
 	.bar-card-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: 32rpx;
+		margin-bottom: 28rpx;
+		padding: 0 4rpx;
 	}
 	.bar-title {
 		font-size: 30rpx;
@@ -285,85 +372,113 @@
 	}
 	.bar-tab-switch {
 		display: flex;
-		background: #2A2A2F;
+		background: #1A1A1E;
 		border-radius: 12rpx;
 		padding: 4rpx;
 	}
 	.tab-btn {
-		font-size: 22rpx;
+		padding: 10rpx 28rpx;
+		border-radius: 10rpx;
+		font-size: 24rpx;
 		font-weight: 500;
 		color: #63636E;
-		padding: 8rpx 20rpx;
-		border-radius: 8rpx;
 		transition: all 0.2s;
 	}
 	.tab-btn.active {
 		background: #34D399;
 		color: #1A1A1E;
+		font-weight: 600;
 	}
+
 	.bar-chart-area {
-		height: 240rpx;
-		display: flex;
-		align-items: flex-end;
-		padding: 0 8rpx;
+		width: 100%;
 	}
 	.bar-columns {
 		display: flex;
 		align-items: flex-end;
 		justify-content: space-between;
-		width: 100%;
-		height: 100%;
+		height: 280rpx;
+		padding: 0 4rpx;
 	}
 	.bar-col {
+		flex: 1;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		height: 100%;
+		max-width: 100rpx;
+		min-width: 0;
+	}
+	.bar-count {
+		font-size: 22rpx;
+		font-weight: 700;
+		color: #34D399;
+		margin-bottom: 8rpx;
+		line-height: 1;
+		/* 数字为 0 时变灰，避免视觉误导 */
+		min-height: 22rpx;
+	}
+	.bar-wrapper {
 		flex: 1;
-		gap: 12rpx;
+		width: 100%;
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+		min-height: 4rpx;
 	}
 	.bar {
-		width: 40rpx;
-		border-radius: 8rpx 8rpx 0 0;
-		background: #34D399;
-		opacity: 0.55;
-		min-height: 8rpx;
-		transition: height 0.3s;
+		width: 60%;
+		min-height: 4rpx;
+		background: linear-gradient(180deg, #34D399 0%, #2EB87B 100%);
+		border-radius: 8rpx 8rpx 4rpx 4rpx;
+		transition: height 0.4s ease;
 	}
 	.bar-col.today .bar {
-		opacity: 1;
-		box-shadow: 0 0 16rpx rgba(52, 211, 153, 0.4);
+		background: linear-gradient(180deg, #60A5FA 0%, #3B82F6 100%);
+		box-shadow: 0 0 16rpx rgba(96, 165, 250, 0.35);
+	}
+	.bar-col.today .bar-count {
+		color: #60A5FA;
 	}
 	.bar-day-label {
 		font-size: 20rpx;
 		color: #63636E;
-		margin-top: 8rpx;
+		margin-top: 12rpx;
+		white-space: nowrap;
+		line-height: 1;
 	}
-	.bar-col.today .bar-day-label {
-		color: #34D399;
-		font-weight: 600;
+	.bar-footer {
+		text-align: center;
+		margin-top: 20rpx;
+		padding-top: 16rpx;
+		border-top: 1px solid rgba(255, 255, 255, 0.04);
+	}
+	.bar-footer-text {
+		font-size: 22rpx;
+		color: #63636E;
 	}
 
-	/* 分类完成 */
+	/* 分类完成情况 */
 	.category-card {
-		padding: 32rpx;
+		padding: 32rpx 32rpx 36rpx;
 	}
 	.card-label-bold {
 		font-size: 30rpx;
 		font-weight: 600;
 		color: #F5F5F7;
-		margin-bottom: 32rpx;
 		display: block;
+		margin-bottom: 28rpx;
 	}
 	.category-item {
-		margin-bottom: 32rpx;
+		margin-bottom: 24rpx;
 	}
 	.category-item:last-child {
 		margin-bottom: 0;
 	}
 	.category-item-header {
 		display: flex;
-		align-items: center;
 		justify-content: space-between;
+		align-items: center;
 		margin-bottom: 12rpx;
 	}
 	.cat-name {
@@ -374,28 +489,40 @@
 	.cat-count {
 		font-size: 24rpx;
 		color: #A1A1AA;
+		font-weight: 500;
 	}
 	.progress-track {
-		width: 100%;
 		height: 12rpx;
-		background: #2A2A2F;
-		border-radius: 6rpx;
+		background: rgba(255, 255, 255, 0.06);
+		border-radius: 9999rpx;
 		overflow: hidden;
 	}
 	.progress-fill {
 		height: 100%;
+		border-radius: 9999rpx;
 		background: #34D399;
-		border-radius: 6rpx;
-		transition: width 0.3s;
+		transition: width 0.4s ease;
 	}
 
-	/* 归档入口 */
+	/* 归档入口 - 卡片样式，醒目可见，底部留足 TabBar 空间 */
 	.archive-entry {
-		padding: 16rpx 32rpx 32rpx;
-		text-align: center;
+		margin: 8rpx 32rpx 40rpx;
+		background: #222226;
+		border: 1px solid rgba(52, 211, 153, 0.2);
+		border-radius: 24rpx;
+		padding: 32rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 12rpx;
+	}
+	.archive-entry:active {
+		opacity: 0.7;
+		transform: scale(0.99);
 	}
 	.archive-link {
-		font-size: 26rpx;
-		color: #63636E;
+		font-size: 28rpx;
+		color: #34D399;
+		font-weight: 600;
 	}
 </style>
