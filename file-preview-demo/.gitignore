@@ -27,6 +27,7 @@ pnpm-debug.log*
 !.vscode/extensions.json
 !.vscode/settings.json
 .idea/
+.workbuddy/
 
 # OS files
 .DS_Store
@@ -38,3 +39,5 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+

@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div style="margin-bottom: 12px">
-      <el-button type="primary" icon="Plus" @click="handleAdd(null)">新增菜单</el-button>
+      <el-button v-permission="'system:menu:add'" type="primary" icon="Plus" @click="handleAdd(null)">新增菜单</el-button>
       <el-button icon="Sort" @click="toggleExpandAll">{{ isExpandAll ? '全部折叠' : '全部展开' }}</el-button>
     </div>
 
@@ -22,17 +22,22 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="visible" label="显示" width="80" align="center">
+        <template #default="{ row }">
+          <el-tag :type="Number(row.visible) === 1 ? 'success' : 'info'" size="small">{{ Number(row.visible) === 1 ? '显示' : '隐藏' }}</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="status" label="状态" width="80" align="center">
         <template #default="{ row }">
-          <el-tag :type="row.status === '1' ? 'success' : 'info'" size="small">{{ row.status === '1' ? '显示' : '隐藏' }}</el-tag>
+          <el-tag :type="row.status === '1' ? 'success' : 'danger'" size="small">{{ row.status === '1' ? '启用' : '停用' }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="createTime" label="创建时间" width="170" align="center" />
       <el-table-column label="操作" width="240" align="center">
         <template #default="{ row }">
-          <el-button link type="primary" icon="Plus" @click="handleAdd(row)" v-if="row.menuType !== 'F'">新增</el-button>
-          <el-button link type="primary" icon="Edit" @click="handleEdit(row)">编辑</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
+          <el-button v-if="row.menuType !== 'F'" v-permission="'system:menu:add'" link type="primary" icon="Plus" @click="handleAdd(row)">新增</el-button>
+          <el-button v-permission="'system:menu:edit'" link type="primary" icon="Edit" @click="handleEdit(row)">编辑</el-button>
+          <el-button v-permission="'system:menu:delete'" link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -57,21 +62,51 @@
           <el-input-number v-model="form.sort" :min="0" :max="999" />
         </el-form-item>
         <el-form-item label="路由地址" v-if="form.menuType !== 'F'">
-          <el-input v-model="form.path" placeholder="请输入路由地址" />
+          <el-input v-model="form.path" placeholder="如：/system/user" />
         </el-form-item>
-        <el-form-item label="权限标识" v-if="form.menuType === 'F'">
-          <el-input v-model="form.permission" placeholder="如：system:user:add" />
+        <el-form-item label="组件路径" v-if="form.menuType === 'C'">
+          <el-input v-model="form.component" placeholder="如：views/system/UserManage.vue" />
+        </el-form-item>
+        <el-form-item label="路由名称" v-if="form.menuType === 'C'">
+          <el-input v-model="form.routeName" placeholder="如：UserManage" />
+        </el-form-item>
+        <el-form-item label="图标">
+          <el-input v-model="form.icon" placeholder="Element Plus 图标名称" />
+        </el-form-item>
+        <el-form-item label="权限标识">
+          <el-input v-model="form.permission" placeholder="如：system:user:list" />
+        </el-form-item>
+        <el-form-item label="是否显示" v-if="form.menuType !== 'F'">
+          <el-radio-group v-model="form.visible">
+            <el-radio :value="1">显示</el-radio>
+            <el-radio :value="0">隐藏</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="页面缓存" v-if="form.menuType === 'C'">
+          <el-radio-group v-model="form.keepAlive">
+            <el-radio :value="1">缓存</el-radio>
+            <el-radio :value="0">不缓存</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="外部链接" v-if="form.menuType === 'C'">
+          <el-radio-group v-model="form.externalLink">
+            <el-radio :value="0">否</el-radio>
+            <el-radio :value="1">是</el-radio>
+          </el-radio-group>
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
-            <el-radio value="1">显示</el-radio>
-            <el-radio value="0">隐藏</el-radio>
+            <el-radio value="1">启用</el-radio>
+            <el-radio value="0">停用</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="请输入备注" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
+        <el-button v-permission="isEdit ? 'system:menu:edit' : 'system:menu:add'" type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -80,67 +115,119 @@
 <script setup>
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { createMenu, deleteMenu, getMenuTree, updateMenu } from '@/api/menu'
 
 const loading = ref(false)
 const refreshTable = ref(true)
 const isExpandAll = ref(true)
+const menuData = ref([])
 
-const menuData = ref([
-  { id: 1, menuName: '首页', icon: 'HomeFilled', sort: 1, path: '/dashboard', menuType: 'M', status: '1', createTime: '2026-01-01 00:00:00', children: [] },
-  { id: 2, menuName: '系统管理', icon: 'Setting', sort: 2, path: '/system', menuType: 'M', status: '1', createTime: '2026-01-01 00:00:00', children: [
-    { id: 21, menuName: '用户管理', icon: 'User', sort: 1, path: '/system/user', menuType: 'C', status: '1', createTime: '2026-01-01 00:00:00', children: [
-      { id: 211, menuName: '新增用户', icon: '', sort: 1, path: '', menuType: 'F', permission: 'system:user:add', status: '1', createTime: '2026-01-01 00:00:00' },
-      { id: 212, menuName: '编辑用户', icon: '', sort: 2, path: '', menuType: 'F', permission: 'system:user:edit', status: '1', createTime: '2026-01-01 00:00:00' },
-      { id: 213, menuName: '删除用户', icon: '', sort: 3, path: '', menuType: 'F', permission: 'system:user:delete', status: '1', createTime: '2026-01-01 00:00:00' },
-    ]},
-    { id: 22, menuName: '角色管理', icon: 'UserFilled', sort: 2, path: '/system/role', menuType: 'C', status: '1', createTime: '2026-01-01 00:00:00', children: [] },
-    { id: 23, menuName: '菜单管理', icon: 'Menu', sort: 3, path: '/system/menu', menuType: 'C', status: '1', createTime: '2026-01-01 00:00:00', children: [] },
-    { id: 24, menuName: '组织管理', icon: 'OfficeBuilding', sort: 4, path: '/system/org', menuType: 'C', status: '1', createTime: '2026-01-01 00:00:00', children: [] },
-  ]},
-  { id: 3, menuName: '日志管理', icon: 'Document', sort: 3, path: '/log', menuType: 'M', status: '1', createTime: '2026-01-01 00:00:00', children: [
-    { id: 31, menuName: '操作日志', icon: 'Document', sort: 1, path: '/log/operation', menuType: 'C', status: '1', createTime: '2026-01-01 00:00:00', children: [] },
-    { id: 32, menuName: '登录日志', icon: 'Key', sort: 2, path: '/log/login', menuType: 'C', status: '1', createTime: '2026-01-01 00:00:00', children: [] },
-  ]},
-])
-
+async function getList() {
+  loading.value = true
+  try {
+    const data = await getMenuTree()
+    menuData.value = normalizeTree(data || [])
+  } catch (error) {
+    ElMessage.error(error?.message || '获取菜单列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+function normalizeTree(nodes) {
+  return nodes.map(node => ({
+    ...node,
+    status: String(node.status),
+    children: normalizeTree(node.children || []),
+  }))
+}
+function findMenuName(nodes, id) {
+  for (const node of nodes) {
+    if (Number(node.id) === Number(id)) return node.menuName
+    const name = findMenuName(node.children || [], id)
+    if (name) return name
+  }
+  return ''
+}
 function toggleExpandAll() {
   isExpandAll.value = !isExpandAll.value
   refreshTable.value = false
   nextTick(() => { refreshTable.value = true })
 }
 
-// 弹窗
 const dialogVisible = ref(false)
 const submitLoading = ref(false)
 const formRef = ref(null)
 const currentId = ref(null)
-const isEdit = computed(() => !!currentId.value)
-const defaultForm = { menuName: '', menuType: 'M', sort: 0, path: '', permission: '', status: '1', parentName: '' }
+const isEdit = computed(() => currentId.value !== null)
+const defaultForm = {
+  parentId: null, menuName: '', menuType: 'M', sort: 0, path: '', component: '', routeName: '',
+  permission: '', icon: '', visible: 1, status: '1', keepAlive: 1, externalLink: 0, remark: '', parentName: '',
+}
 const form = reactive({ ...defaultForm })
 const rules = {
   menuName: [{ required: true, message: '请输入菜单名称', trigger: 'blur' }],
   menuType: [{ required: true, message: '请选择菜单类型', trigger: 'change' }],
 }
 function handleAdd(parent) {
-  currentId.value = null; Object.assign(form, { ...defaultForm, parentName: parent?.menuName || '无（顶级菜单）' })
-  dialogVisible.value = true; nextTick(() => formRef.value?.clearValidate())
+  currentId.value = null
+  Object.assign(form, { ...defaultForm, parentId: parent?.id || null, parentName: parent?.menuName || '无（顶级菜单）' })
+  dialogVisible.value = true
+  nextTick(() => formRef.value?.clearValidate())
 }
 function handleEdit(row) {
-  currentId.value = row.id; Object.assign(form, { ...row, parentName: '' }); dialogVisible.value = true
+  currentId.value = row.id
+  Object.assign(form, { ...defaultForm, ...row, status: String(row.status), parentName: findMenuName(menuData.value, row.parentId) || '无（顶级菜单）' })
+  dialogVisible.value = true
   nextTick(() => formRef.value?.clearValidate())
 }
 function handleClose() { Object.assign(form, { ...defaultForm }); currentId.value = null }
 async function handleSubmit() {
-  await formRef.value.validate(); submitLoading.value = true
-  await new Promise(r => setTimeout(r, 300))
-  ElMessage.success(isEdit.value ? '编辑成功' : '新增成功'); dialogVisible.value = false; submitLoading.value = false
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
+  submitLoading.value = true
+  try {
+    const data = {
+      parentId: form.parentId || null,
+      menuName: form.menuName,
+      menuType: form.menuType,
+      path: form.path || null,
+      component: form.component || null,
+      routeName: form.routeName || null,
+      permission: form.permission || null,
+      icon: form.icon || null,
+      sort: Number(form.sort),
+      visible: Number(form.visible),
+      status: Number(form.status),
+      keepAlive: Number(form.keepAlive),
+      externalLink: Number(form.externalLink),
+      remark: form.remark || null,
+    }
+    if (isEdit.value) await updateMenu(currentId.value, data)
+    else await createMenu(data)
+    ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
+    dialogVisible.value = false
+    await getList()
+  } catch (error) {
+    ElMessage.error(error?.message || '保存菜单失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 async function handleDelete(row) {
-  await ElMessageBox.confirm(`确认删除菜单「${row.menuName}」？`, '提示', { type: 'warning' })
-  ElMessage.success('删除成功')
+  try {
+    await ElMessageBox.confirm(`确认删除菜单「${row.menuName}」？`, '提示', { type: 'warning' })
+    await deleteMenu(row.id)
+    ElMessage.success('删除成功')
+    await getList()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error(error?.message || '删除菜单失败')
+  }
 }
 
-onMounted(() => { loading.value = false })
+onMounted(getList)
 </script>
 
 <style scoped>

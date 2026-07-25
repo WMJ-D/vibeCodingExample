@@ -1,0 +1,7 @@
+export * as authApi from './auth'
+export * as userApi from './user'
+export * as roleApi from './role'
+export * as menuApi from './menu'
+export * as orgApi from './org'
+export * as paramApi from './param'
+export * as logApi from './log'

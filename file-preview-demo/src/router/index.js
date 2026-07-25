@@ -1,14 +1,14 @@
-/*
- * @Author: WangMingJun 2351405492@qq.com
- * @Date: 2026-03-23 15:36:15
- * @LastEditors: WangMingJun 2351405492@qq.com
- * @LastEditTime: 2026-06-07 19:34:59
- * @FilePath: \file-preview-demo\src\router\index.js
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
- */
+import { h } from 'vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
 
-const routes = [
+import store from '@/store'
+
+const pageModules = {
+  ...import.meta.glob('../views/**/*.vue'),
+  ...import.meta.glob('../components/**/*.vue'),
+}
+
+const constantRoutes = [
   {
     path: '/login',
     name: 'Login',
@@ -16,161 +16,131 @@ const routes = [
     meta: { title: '登录', keepAlive: false },
   },
   {
-    path: '/my-map',
-    name: 'MyMap',
-    component: () => import('@/views/MyMap.vue'),
-    meta: { title: '我的地图', icon: 'Location' },
-  },
-  {
     path: '/',
+    name: 'AdminRoot',
     component: () => import('@/layout/AdminLayout.vue'),
-    redirect: '/dashboard',
-    children: [
-      {
-        path: 'dashboard',
-        name: 'Dashboard',
-        component: () => import('@/views/dashboard/Dashboard.vue'),
-        meta: { title: '首页', icon: 'HomeFilled' },
-      },
-      {
-        path: 'system/user',
-        name: 'UserManage',
-        component: () => import('@/views/system/UserManage.vue'),
-        meta: { title: '用户管理', icon: 'User' },
-      },
-      {
-        path: 'system/role',
-        name: 'RoleManage',
-        component: () => import('@/views/system/RoleManage.vue'),
-        meta: { title: '角色管理', icon: 'UserFilled' },
-      },
-      {
-        path: 'system/menu',
-        name: 'MenuManage',
-        component: () => import('@/views/system/MenuManage.vue'),
-        meta: { title: '菜单管理', icon: 'Menu' },
-      },
-      {
-        path: 'system/org',
-        name: 'OrgManage',
-        component: () => import('@/views/system/OrgManage.vue'),
-        meta: { title: '组织管理', icon: 'OfficeBuilding' },
-      },
-      {
-        path: 'system/param',
-        name: 'ParamManage',
-        component: () => import('@/views/system/ParamManage.vue'),
-        meta: { title: '参数管理', icon: 'Operation' },
-      },
-      {
-        path: 'log/operation',
-        name: 'OperationLog',
-        component: () => import('@/views/log/OperationLog.vue'),
-        meta: { title: '操作日志', icon: 'Document' },
-      },
-      {
-        path: 'log/login',
-        name: 'LoginLog',
-        component: () => import('@/views/log/LoginLog.vue'),
-        meta: { title: '登录日志', icon: 'Key' },
-      },
-      {
-        path: 'demo/file-preview',
-        name: 'FilePreview',
-        component: () => import('@/components/FilePreview.vue'),
-        meta: { title: '文件预览', icon: 'Picture' },
-      },
-      {
-        path: 'demo/list-page',
-        name: 'ListPage',
-        component: () => import('@/components/ListPage.vue'),
-        meta: { title: '列表示例', icon: 'List' },
-      },
-      {
-        path: 'demo/chart-dashboard',
-        name: 'ChartDashboard',
-        component: () => import('@/components/ChartDashboard.vue'),
-        meta: { title: '数据大屏', icon: 'PieChart' },
-      },
-      {
-        path: 'demo/lan-transfer',
-        name: 'LanTransfer',
-        component: () => import('@/views/demo/LanTransfer.vue'),
-        meta: { title: '局域网互传', icon: 'Connection' },
-      },
-      {
-        path: 'demo/lan-video',
-        name: 'LanVideo',
-        component: () => import('@/views/demo/LanVideo.vue'),
-        meta: { title: '局域网视频', icon: 'VideoCamera' },
-      },
-      {
-        path: 'demo/my-cesium',
-        name: 'MyCesium',
-        component: () => import('@/views/demo/MyCesium.vue'),
-        meta: { title: '我的 Cesium', icon: 'Location', keepAlive: false },
-      },
-      {
-        path: 'demo/angry-birds',
-        name: 'AngryBirds',
-        component: () => import('@/views/demo/AngryBirds.vue'),
-        meta: { title: '愤怒的小鸟', icon: 'Promotion', keepAlive: false },
-      },
-      {
-        path: 'demo/vr-demo',
-        name: 'VRDemo',
-        component: () => import('@/views/demo/VRDemo.vue'),
-        meta: { title: 'VR演示', icon: 'VideoCamera', keepAlive: false },
-      },
-      {
-        path: 'demo/minecraft',
-        name: 'MineCraft',
-        component: () => import('@/views/demo/MineCraft.vue'),
-        meta: { title: '我的世界', icon: 'Box', keepAlive: false },
-      },
-      {
-        path: 'agent/knowledge',
-        name: 'KnowledgeAgent',
-        component: () => import('@/views/agent/KnowledgeAgent.vue'),
-        meta: { title: '知识库智能体', icon: 'Cpu' },
-      },
-      {
-        path: 'config/editor',
-        name: 'ConfigEditor',
-        component: () => import('@/views/config/ConfigEditor.vue'),
-        meta: { title: '配置编辑器', icon: 'Setting' },
-      },
-    ],
+    children: [],
   },
 ]
 
-function applyDefaultRouteCache(routeList) {
-  routeList.forEach(route => {
-    if (route.name && route.meta?.keepAlive !== false) {
-      route.meta = { ...route.meta, keepAlive: true }
-    }
-    if (route.children?.length) {
-      applyDefaultRouteCache(route.children)
-    }
-  })
+let removeRouteCallbacks = []
+
+function normalizeComponentPath(component) {
+  return String(component || '')
+    .replace(/^@\//, '')
+    .replace(/^src\//, '')
+    .replace(/^\//, '')
 }
 
-applyDefaultRouteCache(routes)
+function resolveComponent(component) {
+  const normalized = normalizeComponentPath(component)
+  return pageModules[`../${normalized}`]
+}
+
+function normalizeRoutePath(path, parentPath = '') {
+  if (!path) return ''
+  if (path.startsWith('/')) return path
+  return `/${[parentPath, path].filter(Boolean).join('/')}`.replace(/\/{2,}/g, '/')
+}
+
+function menuTreeToRoutes(menus, parentPath = '') {
+  const routes = []
+  for (const menu of menus || []) {
+    if (menu.menuType === 'F' || Number(menu.visible) === 0 || Number(menu.status) === 0) continue
+    const menuPath = normalizeRoutePath(menu.path, parentPath)
+
+    if (menu.menuType === 'C') {
+      const component = resolveComponent(menu.component)
+      if (component && menuPath) {
+        routes.push({
+          path: menuPath,
+          name: menu.routeName || `MenuRoute${menu.id}`,
+          component,
+          meta: {
+            title: menu.menuName,
+            icon: menu.icon,
+            keepAlive: Number(menu.keepAlive) !== 0,
+            permission: menu.permission,
+          },
+        })
+      } else {
+        console.warn(`无法加载菜单组件：${menu.component || menu.menuName}`)
+      }
+    }
+
+    routes.push(...menuTreeToRoutes(menu.children, menuPath || parentPath))
+  }
+  return routes
+}
+
+export function resetDynamicRoutes(routerInstance = router) {
+  removeRouteCallbacks.forEach(remove => remove())
+  removeRouteCallbacks = []
+}
+
+export function setupDynamicRoutes(routerInstance = router, menus = []) {
+  resetDynamicRoutes(routerInstance)
+  const routes = menuTreeToRoutes(menus)
+  routes.forEach(route => {
+    removeRouteCallbacks.push(routerInstance.addRoute('AdminRoot', route))
+  })
+  removeRouteCallbacks.push(routerInstance.addRoute({
+    path: '/:pathMatch(.*)*',
+    name: 'DynamicNotFound',
+    component: {
+      render: () => h('div', { style: 'padding: 48px; color: #d7ffe7;' }, '页面不存在'),
+    },
+    meta: { title: '页面不存在', keepAlive: false },
+  }))
+  return routes
+}
 
 const router = createRouter({
   history: createWebHashHistory(),
-  routes,
+  routes: constantRoutes,
 })
 
-// 简单的登录拦截
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('admin_token')
-  if (to.path !== '/login' && !token) {
-    next('/login')
-  } else {
-    document.title = to.meta?.title ? `${to.meta.title} - 后台管理` : '后台管理'
-    next()
+router.beforeEach(async (to, from, next) => {
+  const token = store.state.token
+  if (!token) {
+    if (to.path === '/login') {
+      next()
+    } else {
+      next({ path: '/login', query: { redirect: to.fullPath }, replace: true })
+    }
+    return
   }
+
+  if (to.path === '/login' && store.state.routesLoaded) {
+    next(store.getters.firstAccessiblePath)
+    return
+  }
+
+  if (!store.state.routesLoaded) {
+    try {
+      await store.dispatch('bootstrap', router)
+      const target = to.path === '/login' || to.path === '/'
+        ? store.getters.firstAccessiblePath
+        : to.fullPath
+      next({ path: target, replace: true })
+    } catch {
+      await store.dispatch('reset', router)
+      next({ path: '/login', query: to.path === '/login' ? {} : { redirect: to.fullPath }, replace: true })
+    }
+    return
+  }
+
+  if (to.path === '/') {
+    next(store.getters.firstAccessiblePath)
+    return
+  }
+
+  document.title = to.meta?.title ? `${to.meta.title} - 后台管理` : '后台管理'
+  next()
+})
+
+router.afterEach(to => {
+  document.title = to.meta?.title ? `${to.meta.title} - 后台管理` : '后台管理'
 })
 
 export default router

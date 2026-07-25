@@ -11,7 +11,7 @@
     </el-form>
 
     <div style="margin-bottom: 12px">
-      <el-button type="primary" icon="Plus" @click="handleAdd(null)">新增组织</el-button>
+      <el-button v-permission="'system:org:add'" type="primary" icon="Plus" @click="handleAdd(null)">新增组织</el-button>
       <el-button icon="Sort" @click="toggleExpandAll">{{ isExpandAll ? '全部折叠' : '全部展开' }}</el-button>
     </div>
 
@@ -29,9 +29,9 @@
       <el-table-column prop="createTime" label="创建时间" width="170" align="center" />
       <el-table-column label="操作" width="240" align="center">
         <template #default="{ row }">
-          <el-button link type="primary" icon="Plus" @click="handleAdd(row)">新增</el-button>
-          <el-button link type="primary" icon="Edit" @click="handleEdit(row)">编辑</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
+          <el-button v-permission="'system:org:add'" link type="primary" icon="Plus" @click="handleAdd(row)">新增</el-button>
+          <el-button v-permission="'system:org:edit'" link type="primary" icon="Edit" @click="handleEdit(row)">编辑</el-button>
+          <el-button v-permission="'system:org:delete'" link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -63,7 +63,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
+        <el-button v-permission="isEdit ? 'system:org:edit' : 'system:org:add'" type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -72,32 +72,39 @@
 <script setup>
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { createOrg, deleteOrg, getOrgTree, updateOrg } from '@/api/org'
 
 const loading = ref(false)
 const refreshTable = ref(true)
 const isExpandAll = ref(true)
 const query = reactive({ orgName: '' })
+const orgData = ref([])
 
-const orgData = ref([
-  { id: 1, orgName: '总公司', leader: '张总', phone: '13800000001', sort: 1, status: '1', createTime: '2026-01-01 00:00:00', children: [
-    { id: 11, orgName: '技术部', leader: '李工', phone: '13800000011', sort: 1, status: '1', createTime: '2026-01-10 09:00:00', children: [
-      { id: 111, orgName: '前端组', leader: '王前端', phone: '13800000111', sort: 1, status: '1', createTime: '2026-02-01 09:00:00', children: [] },
-      { id: 112, orgName: '后端组', leader: '赵后端', phone: '13800000112', sort: 2, status: '1', createTime: '2026-02-01 09:00:00', children: [] },
-    ]},
-    { id: 12, orgName: '产品部', leader: '刘产品', phone: '13800000012', sort: 2, status: '1', createTime: '2026-01-10 09:00:00', children: [] },
-    { id: 13, orgName: '运营部', leader: '孙运营', phone: '13800000013', sort: 3, status: '1', createTime: '2026-01-10 09:00:00', children: [] },
-    { id: 14, orgName: '市场部', leader: '周市场', phone: '13800000014', sort: 4, status: '0', createTime: '2026-01-10 09:00:00', children: [] },
-  ]},
-])
-
-const filteredData = computed(() => {
-  if (!query.orgName) return orgData.value
-  // 简单过滤（仅搜索顶层和第一层子节点名称）
-  return orgData.value
-})
-
-function search() { /* 树形结构搜索需要递归，这里简化处理 */ }
-function reset() { query.orgName = '' }
+async function getList() {
+  loading.value = true
+  try {
+    const data = await getOrgTree(query)
+    orgData.value = normalizeTree(data || [])
+  } catch (error) {
+    ElMessage.error(error?.message || '获取组织列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+function normalizeTree(nodes) {
+  return nodes.map(node => ({ ...node, status: String(node.status), children: normalizeTree(node.children || []) }))
+}
+function findOrgName(nodes, id) {
+  for (const node of nodes) {
+    if (Number(node.id) === Number(id)) return node.orgName
+    const name = findOrgName(node.children || [], id)
+    if (name) return name
+  }
+  return ''
+}
+const filteredData = computed(() => orgData.value)
+function search() { getList() }
+function reset() { query.orgName = ''; getList() }
 
 function toggleExpandAll() {
   isExpandAll.value = !isExpandAll.value
@@ -109,31 +116,65 @@ const dialogVisible = ref(false)
 const submitLoading = ref(false)
 const formRef = ref(null)
 const currentId = ref(null)
-const isEdit = computed(() => !!currentId.value)
-const defaultForm = { orgName: '', leader: '', phone: '', sort: 0, status: '1', parentName: '' }
+const isEdit = computed(() => currentId.value !== null)
+const defaultForm = { parentId: null, orgName: '', orgCode: '', leader: '', phone: '', email: '', sort: 0, status: '1', parentName: '' }
 const form = reactive({ ...defaultForm })
 const rules = { orgName: [{ required: true, message: '请输入组织名称', trigger: 'blur' }] }
 
 function handleAdd(parent) {
-  currentId.value = null; Object.assign(form, { ...defaultForm, parentName: parent?.orgName || '无（顶级组织）' })
-  dialogVisible.value = true; nextTick(() => formRef.value?.clearValidate())
+  currentId.value = null
+  Object.assign(form, { ...defaultForm, parentId: parent?.id || null, parentName: parent?.orgName || '无（顶级组织）' })
+  dialogVisible.value = true
+  nextTick(() => formRef.value?.clearValidate())
 }
 function handleEdit(row) {
-  currentId.value = row.id; Object.assign(form, { ...row, parentName: '' }); dialogVisible.value = true
+  currentId.value = row.id
+  Object.assign(form, { ...defaultForm, ...row, status: String(row.status), parentName: findOrgName(orgData.value, row.parentId) || '无（顶级组织）' })
+  dialogVisible.value = true
   nextTick(() => formRef.value?.clearValidate())
 }
 function handleClose() { Object.assign(form, { ...defaultForm }); currentId.value = null }
 async function handleSubmit() {
-  await formRef.value.validate(); submitLoading.value = true
-  await new Promise(r => setTimeout(r, 300))
-  ElMessage.success(isEdit.value ? '编辑成功' : '新增成功'); dialogVisible.value = false; submitLoading.value = false
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
+  submitLoading.value = true
+  try {
+    const data = {
+      parentId: form.parentId || null,
+      orgName: form.orgName,
+      orgCode: form.orgCode || null,
+      leader: form.leader || null,
+      phone: form.phone || null,
+      email: form.email || null,
+      sort: Number(form.sort),
+      status: Number(form.status),
+    }
+    if (isEdit.value) await updateOrg(currentId.value, data)
+    else await createOrg(data)
+    ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
+    dialogVisible.value = false
+    await getList()
+  } catch (error) {
+    ElMessage.error(error?.message || '保存组织失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 async function handleDelete(row) {
-  await ElMessageBox.confirm(`确认删除组织「${row.orgName}」？`, '提示', { type: 'warning' })
-  ElMessage.success('删除成功')
+  try {
+    await ElMessageBox.confirm(`确认删除组织「${row.orgName}」？`, '提示', { type: 'warning' })
+    await deleteOrg(row.id)
+    ElMessage.success('删除成功')
+    await getList()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error(error?.message || '删除组织失败')
+  }
 }
 
-onMounted(() => { loading.value = false })
+onMounted(getList)
 </script>
 
 <style scoped>

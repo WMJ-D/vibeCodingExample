@@ -15,35 +15,44 @@
           </el-button>
         </el-form-item>
       </el-form>
-      <p class="tip">提示：任意用户名密码即可登录（演示模式）</p>
+      <p class="tip">请输入有效的系统账号和密码</p>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 import { ElMessage } from 'element-plus'
 
+const route = useRoute()
 const router = useRouter()
+const store = useStore()
 const formRef = ref(null)
 const loading = ref(false)
 
-const form = reactive({ username: 'admin', password: '123456' })
+const form = reactive({ username: '', password: '' })
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
 
 async function handleLogin() {
-  await formRef.value.validate()
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
   loading.value = true
   try {
-    // TODO: 替换为真实登录接口
-    await new Promise(r => setTimeout(r, 500))
-    localStorage.setItem('admin_token', 'mock-token-' + Date.now())
+    await store.dispatch('login', { username: form.username, password: form.password })
+    await store.dispatch('bootstrap', router)
     ElMessage.success('登录成功')
-    router.push('/dashboard')
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    await router.replace(redirect || store.getters.firstAccessiblePath)
+  } catch (error) {
+    ElMessage.error(error?.message || '登录失败')
   } finally {
     loading.value = false
   }

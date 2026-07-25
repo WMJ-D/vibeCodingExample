@@ -21,7 +21,7 @@
     </el-form>
 
     <div style="margin-bottom: 12px">
-      <el-button type="primary" icon="Plus" @click="handleAdd">新增参数</el-button>
+      <el-button v-permission="'system:param:add'" type="primary" icon="Plus" @click="handleAdd">新增参数</el-button>
     </div>
 
     <!-- 表格 -->
@@ -41,8 +41,8 @@
       <el-table-column prop="createTime" label="创建时间" width="170" align="center" />
       <el-table-column label="操作" width="150" fixed="right" align="center">
         <template #default="{ row }">
-          <el-button link type="primary" icon="Edit" @click="handleEdit(row)">编辑</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
+          <el-button v-permission="'system:param:edit'" link type="primary" icon="Edit" @click="handleEdit(row)">编辑</el-button>
+          <el-button v-permission="'system:param:delete'" link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -78,7 +78,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
+        <el-button v-permission="isEdit ? 'system:param:edit' : 'system:param:add'" type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -87,51 +87,34 @@
 <script setup>
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { createParam, deleteParam, getParamList, updateParam } from '@/api/param'
 
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
 const query = reactive({ paramName: '', paramKey: '', paramType: '', pageNum: 1, pageSize: 10 })
 
-const mockParams = [
-  { id: 1, paramName: '主框架页-默认皮肤样式名称', paramKey: 'sys.index.skinName', paramValue: 'skin-blue', paramType: 'Y', remark: '蓝色 skin-blue、绿色 skin-green、紫色 skin-purple、红色 skin-red、黄色 skin-yellow', createTime: '2026-03-01 10:00:00' },
-  { id: 2, paramName: '用户管理-账号初始密码', paramKey: 'sys.user.initPassword', paramValue: '123456', paramType: 'Y', remark: '初始化密码 123456', createTime: '2026-03-01 10:00:00' },
-  { id: 3, paramName: '主框架页-侧边栏主题', paramKey: 'sys.index.sideTheme', paramValue: 'theme-dark', paramType: 'Y', remark: '深色主题 theme-dark，浅色主题 theme-light', createTime: '2026-03-02 10:00:00' },
-  { id: 4, paramName: '账号自助-是否开启用户注册功能', paramKey: 'sys.account.registerUser', paramValue: 'false', paramType: 'Y', remark: '是否开启注册用户功能（true 开启，false 关闭）', createTime: '2026-03-03 10:00:00' },
-  { id: 5, paramName: '用户登录-验证码开关', paramKey: 'sys.login.captchaEnabled', paramValue: 'true', paramType: 'Y', remark: '是否开启验证码功能（true 开启，false 关闭）', createTime: '2026-03-04 10:00:00' },
-  { id: 6, paramName: '用户登录-黑名单开关', paramKey: 'sys.login.blacklistEnabled', paramValue: 'false', paramType: 'Y', remark: '是否开启登录黑名单校验（true 开启，false 关闭）', createTime: '2026-03-05 10:00:00' },
-  { id: 7, paramName: '文件上传-最大大小限制', paramKey: 'sys.upload.maxSize', paramValue: '50', paramType: 'N', remark: '单位 MB，默认 50MB', createTime: '2026-03-06 10:00:00' },
-  { id: 8, paramName: '文件上传-允许的文件类型', paramKey: 'sys.upload.allowTypes', paramValue: 'jpg,png,pdf,doc,xlsx', paramType: 'N', remark: '允许上传的文件后缀，逗号分隔', createTime: '2026-03-07 10:00:00' },
-  { id: 9, paramName: '系统通知-邮件发送开关', paramKey: 'sys.notify.emailEnabled', paramValue: 'true', paramType: 'N', remark: '是否启用邮件通知', createTime: '2026-03-08 10:00:00' },
-  { id: 10, paramName: '系统通知-短信发送开关', paramKey: 'sys.notify.smsEnabled', paramValue: 'false', paramType: 'N', remark: '是否启用短信通知', createTime: '2026-03-09 10:00:00' },
-  { id: 11, paramName: '数据导出-单次最大条数', paramKey: 'sys.export.maxRows', paramValue: '10000', paramType: 'N', remark: '单次导出最大行数限制', createTime: '2026-03-10 10:00:00' },
-  { id: 12, paramName: '会话超时时间', paramKey: 'sys.session.timeout', paramValue: '30', paramType: 'Y', remark: '单位分钟，默认 30 分钟', createTime: '2026-03-11 10:00:00' },
-]
-
 async function getList() {
   loading.value = true
-  await new Promise(r => setTimeout(r, 300))
-  let filtered = mockParams.filter(p => {
-    if (query.paramName && !p.paramName.includes(query.paramName)) return false
-    if (query.paramKey && !p.paramKey.includes(query.paramKey)) return false
-    if (query.paramType && p.paramType !== query.paramType) return false
-    return true
-  })
-  total.value = filtered.length
-  const start = (query.pageNum - 1) * query.pageSize
-  tableData.value = filtered.slice(start, start + query.pageSize)
-  loading.value = false
+  try {
+    const result = await getParamList(query)
+    tableData.value = result?.list || []
+    total.value = result?.total || 0
+  } catch (error) {
+    ElMessage.error(error?.message || '获取参数列表失败')
+  } finally {
+    loading.value = false
+  }
 }
 function search() { query.pageNum = 1; getList() }
 function reset() { Object.assign(query, { paramName: '', paramKey: '', paramType: '', pageNum: 1 }); getList() }
 
-// 弹窗
 const dialogVisible = ref(false)
 const submitLoading = ref(false)
 const formRef = ref(null)
 const currentId = ref(null)
-const isEdit = computed(() => !!currentId.value)
-const defaultForm = { paramName: '', paramKey: '', paramValue: '', paramType: 'Y', remark: '' }
+const isEdit = computed(() => currentId.value !== null)
+const defaultForm = { paramName: '', paramKey: '', paramValue: '', paramType: 'Y', valueType: 'string', remark: '' }
 const form = reactive({ ...defaultForm })
 const rules = {
   paramName: [{ required: true, message: '请输入参数名称', trigger: 'blur' }],
@@ -145,25 +128,51 @@ function handleAdd() {
   nextTick(() => formRef.value?.clearValidate())
 }
 function handleEdit(row) {
-  currentId.value = row.id; Object.assign(form, row); dialogVisible.value = true
+  currentId.value = row.id; Object.assign(form, { ...defaultForm, ...row }); dialogVisible.value = true
   nextTick(() => formRef.value?.clearValidate())
 }
 function handleClose() { Object.assign(form, { ...defaultForm }); currentId.value = null }
 
 async function handleSubmit() {
-  await formRef.value.validate()
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
   submitLoading.value = true
-  await new Promise(r => setTimeout(r, 300))
-  ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
-  dialogVisible.value = false; submitLoading.value = false; getList()
+  try {
+    const data = {
+      paramName: form.paramName,
+      paramKey: form.paramKey,
+      paramValue: form.paramValue,
+      paramType: form.paramType,
+      valueType: form.valueType,
+      remark: form.remark || null,
+    }
+    if (isEdit.value) await updateParam(currentId.value, data)
+    else await createParam(data)
+    ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
+    dialogVisible.value = false
+    await getList()
+  } catch (error) {
+    ElMessage.error(error?.message || '保存参数失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 async function handleDelete(row) {
-  await ElMessageBox.confirm(`确认删除参数「${row.paramName}」？`, '提示', { type: 'warning' })
-  ElMessage.success('删除成功'); getList()
+  try {
+    await ElMessageBox.confirm(`确认删除参数「${row.paramName}」？`, '提示', { type: 'warning' })
+    await deleteParam(row.id)
+    ElMessage.success('删除成功')
+    await getList()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error(error?.message || '删除参数失败')
+  }
 }
 
-onMounted(() => getList())
+onMounted(getList)
 </script>
 
 <style scoped>

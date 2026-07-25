@@ -12,13 +12,11 @@
       <component
         :is="Component"
         v-if="route.meta.keepAlive"
-        :key="route.name || route.path"
       />
     </keep-alive>
     <component
       :is="Component"
       v-if="!route.meta.keepAlive"
-      :key="route.name || route.path"
     />
   </router-view>
 </template>

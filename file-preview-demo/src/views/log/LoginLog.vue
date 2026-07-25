@@ -24,8 +24,8 @@
     </el-form>
 
     <div style="margin-bottom: 12px">
-      <el-button type="danger" icon="Delete" :disabled="!selectedIds.length" @click="handleBatchDelete">批量删除</el-button>
-      <el-button type="warning" icon="Download" @click="handleExport">导出</el-button>
+      <el-button v-permission="'log:login:delete'" type="danger" icon="Delete" :disabled="!selectedIds.length" @click="handleBatchDelete">批量删除</el-button>
+      <el-button v-permission="'log:login:export'" type="warning" icon="Download" @click="handleExport">导出</el-button>
     </div>
 
     <el-table v-loading="loading" :data="tableData" border stripe @selection-change="handleSelectionChange">
@@ -56,6 +56,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { batchDeleteLoginLogs, exportLoginLogs, getLoginLogList } from '@/api/log'
 
 const loading = ref(false)
 const tableData = ref([])
@@ -63,46 +64,66 @@ const total = ref(0)
 const selectedIds = ref([])
 const query = reactive({ username: '', ip: '', status: '', dateRange: null, pageNum: 1, pageSize: 10 })
 
-const usernames = ['admin', '张三', '李四', '王五', '赵六']
-const browsers = ['Chrome 120', 'Firefox 121', 'Edge 120', 'Safari 17']
-const osList = ['Windows 10', 'Windows 11', 'macOS 14', 'Linux']
-const locations = ['武汉', '北京', '上海', '深圳', '广州', '成都']
-
-const mockData = Array.from({ length: 85 }, (_, i) => ({
-  id: i + 1,
-  username: usernames[i % usernames.length],
-  ip: `192.168.${1 + (i % 5)}.${100 + (i % 155)}`,
-  location: locations[i % locations.length],
-  browser: browsers[i % browsers.length],
-  os: osList[i % osList.length],
-  status: i % 8 === 0 ? '失败' : '成功',
-  message: i % 8 === 0 ? '密码错误' : '登录成功',
-  loginTime: `2026-03-${String(23 - (i % 23)).padStart(2, '0')} ${String(7 + (i % 16)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}:${String((i * 7) % 60).padStart(2, '0')}`,
-}))
+function getQueryParams(includePagination = true) {
+  const params = {
+    username: query.username,
+    ip: query.ip,
+    status: query.status,
+    dateRange: query.dateRange || undefined,
+  }
+  if (includePagination) {
+    params.pageNum = query.pageNum
+    params.pageSize = query.pageSize
+  }
+  return params
+}
 
 async function getList() {
   loading.value = true
-  await new Promise(r => setTimeout(r, 300))
-  let filtered = mockData.filter(item => {
-    if (query.username && !item.username.includes(query.username)) return false
-    if (query.ip && !item.ip.includes(query.ip)) return false
-    if (query.status && item.status !== query.status) return false
-    return true
-  })
-  total.value = filtered.length
-  const start = (query.pageNum - 1) * query.pageSize
-  tableData.value = filtered.slice(start, start + query.pageSize)
-  loading.value = false
+  try {
+    const result = await getLoginLogList(getQueryParams())
+    tableData.value = result?.list || []
+    total.value = Number(result?.total) || 0
+    selectedIds.value = []
+  } catch (error) {
+    tableData.value = []
+    total.value = 0
+    ElMessage.error(error?.message || '登录日志查询失败')
+  } finally {
+    loading.value = false
+  }
 }
 function search() { query.pageNum = 1; getList() }
 function reset() { Object.assign(query, { username: '', ip: '', status: '', dateRange: null, pageNum: 1 }); getList() }
 function handleSelectionChange(rows) { selectedIds.value = rows.map(r => r.id) }
 
 async function handleBatchDelete() {
-  await ElMessageBox.confirm(`确认删除选中的 ${selectedIds.value.length} 条记录？`, '提示', { type: 'warning' })
-  ElMessage.success('删除成功'); getList()
+  try {
+    await ElMessageBox.confirm(`确认删除选中的 ${selectedIds.value.length} 条记录？`, '提示', { type: 'warning' })
+    await batchDeleteLoginLogs(selectedIds.value)
+    ElMessage.success('删除成功')
+    if (tableData.value.length === selectedIds.value.length && query.pageNum > 1) query.pageNum -= 1
+    await getList()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error(error?.message || '删除失败')
+  }
 }
-function handleExport() { ElMessage.success('导出成功（演示）') }
+async function handleExport() {
+  try {
+    const blob = await exportLoginLogs(getQueryParams(false))
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'login-logs.csv'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error(error?.message || '导出失败')
+  }
+}
 
 onMounted(() => getList())
 </script>

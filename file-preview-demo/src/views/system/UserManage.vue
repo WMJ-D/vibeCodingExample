@@ -21,7 +21,7 @@
     </el-form>
 
     <div style="margin-bottom: 12px">
-      <el-button type="primary" icon="Plus" @click="handleAdd">新增用户</el-button>
+      <el-button v-permission="'system:user:add'" type="primary" icon="Plus" @click="handleAdd">新增用户</el-button>
     </div>
 
     <!-- 表格 -->
@@ -35,15 +35,15 @@
       <el-table-column prop="roleName" label="角色" width="120" />
       <el-table-column prop="status" label="状态" width="80" align="center">
         <template #default="{ row }">
-          <el-switch v-model="row.status" active-value="1" inactive-value="0" @change="handleStatusChange(row)" />
+          <el-switch v-permission="'system:user:change-status'" v-model="row.status" active-value="1" inactive-value="0" @change="handleStatusChange(row)" />
         </template>
       </el-table-column>
       <el-table-column prop="createTime" label="创建时间" width="170" align="center" />
       <el-table-column label="操作" width="180" fixed="right" align="center">
         <template #default="{ row }">
-          <el-button link type="primary" icon="Edit" @click="handleEdit(row)">编辑</el-button>
-          <el-button link type="primary" icon="Key" @click="handleResetPwd(row)">重置</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
+          <el-button v-permission="'system:user:edit'" link type="primary" icon="Edit" @click="handleEdit(row)">编辑</el-button>
+          <el-button v-permission="'system:user:reset-password'" link type="primary" icon="Key" @click="handleResetPwd(row)">重置</el-button>
+          <el-button v-permission="'system:user:delete'" link type="danger" icon="Delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -71,13 +71,13 @@
           <el-input v-model="form.email" placeholder="请输入邮箱" />
         </el-form-item>
         <el-form-item label="所属组织">
-          <el-input v-model="form.orgName" placeholder="请选择组织" />
+          <el-tree-select v-model="form.orgId" :data="orgOptions" node-key="id"
+            :props="{ value: 'id', label: 'orgName', children: 'children' }" check-strictly clearable
+            placeholder="请选择组织" style="width: 100%" />
         </el-form-item>
         <el-form-item label="角色">
-          <el-select v-model="form.roleName" placeholder="请选择角色" style="width: 100%">
-            <el-option label="超级管理员" value="超级管理员" />
-            <el-option label="普通用户" value="普通用户" />
-            <el-option label="编辑" value="编辑" />
+          <el-select v-model="form.roleIds" multiple placeholder="请选择角色" style="width: 100%">
+            <el-option v-for="role in roleOptions" :key="role.id" :label="role.roleName" :value="role.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
@@ -89,7 +89,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
+        <el-button v-permission="isEdit ? 'system:user:edit' : 'system:user:add'" type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -98,48 +98,38 @@
 <script setup>
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { createUser, deleteUser, getUser, getUserList, resetUserPassword, updateUser, updateUserStatus } from '@/api/user'
+import { getOrgTree } from '@/api/org'
+import { getRoleList } from '@/api/role'
 
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
+const orgOptions = ref([])
+const roleOptions = ref([])
 const query = reactive({ username: '', phone: '', status: '', pageNum: 1, pageSize: 10 })
-
-const mockUsers = Array.from({ length: 46 }, (_, i) => ({
-  id: i + 1,
-  username: `user${i + 1}`,
-  nickname: ['张三', '李四', '王五', '赵六', '孙七', '周八'][i % 6],
-  phone: `138${String(10000000 + i).slice(0, 8)}`,
-  email: `user${i + 1}@example.com`,
-  orgName: ['技术部', '产品部', '运营部', '市场部'][i % 4],
-  roleName: ['超级管理员', '普通用户', '编辑'][i % 3],
-  status: i % 5 === 0 ? '0' : '1',
-  createTime: '2026-03-' + String(1 + (i % 28)).padStart(2, '0') + ' 10:00:00',
-}))
 
 async function getList() {
   loading.value = true
-  await new Promise(r => setTimeout(r, 300))
-  let filtered = mockUsers.filter(u => {
-    if (query.username && !u.username.includes(query.username)) return false
-    if (query.phone && !u.phone.includes(query.phone)) return false
-    if (query.status && u.status !== query.status) return false
-    return true
-  })
-  total.value = filtered.length
-  const start = (query.pageNum - 1) * query.pageSize
-  tableData.value = filtered.slice(start, start + query.pageSize)
-  loading.value = false
+  try {
+    const result = await getUserList(query)
+    tableData.value = (result?.list || []).map(item => ({ ...item, status: String(item.status) }))
+    total.value = result?.total || 0
+  } catch (error) {
+    ElMessage.error(error?.message || '获取用户列表失败')
+  } finally {
+    loading.value = false
+  }
 }
 function search() { query.pageNum = 1; getList() }
 function reset() { Object.assign(query, { username: '', phone: '', status: '', pageNum: 1 }); getList() }
 
-// 弹窗
 const dialogVisible = ref(false)
 const submitLoading = ref(false)
 const formRef = ref(null)
 const currentId = ref(null)
-const isEdit = computed(() => !!currentId.value)
-const defaultForm = { username: '', nickname: '', phone: '', email: '', orgName: '', roleName: '', status: '1' }
+const isEdit = computed(() => currentId.value !== null)
+const defaultForm = { username: '', nickname: '', phone: '', email: '', orgId: null, roleIds: [], status: '1' }
 const form = reactive({ ...defaultForm })
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -147,37 +137,108 @@ const rules = {
   phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
 }
 
+async function loadOptions() {
+  try {
+    const orgs = await getOrgTree()
+    const roles = []
+    let pageNum = 1
+    let totalRoles = 0
+    do {
+      const result = await getRoleList({ pageNum, pageSize: 100, status: 1 })
+      roles.push(...(result?.list || []))
+      totalRoles = Number(result?.total) || roles.length
+      pageNum += 1
+    } while (roles.length < totalRoles)
+    orgOptions.value = orgs || []
+    roleOptions.value = roles.map(item => ({ ...item, id: Number(item.id) }))
+  } catch (error) {
+    ElMessage.error(error?.message || '获取组织和角色选项失败')
+  }
+}
+
 function handleAdd() {
-  currentId.value = null; Object.assign(form, { ...defaultForm }); dialogVisible.value = true
+  currentId.value = null
+  Object.assign(form, { ...defaultForm, roleIds: [] })
+  dialogVisible.value = true
   nextTick(() => formRef.value?.clearValidate())
 }
-function handleEdit(row) {
-  currentId.value = row.id; Object.assign(form, row); dialogVisible.value = true
-  nextTick(() => formRef.value?.clearValidate())
+async function handleEdit(row) {
+  currentId.value = row.id
+  dialogVisible.value = true
+  try {
+    const detail = await getUser(row.id)
+    Object.assign(form, { ...defaultForm, ...detail, status: String(detail.status), roleIds: detail.roleIds || [] })
+    nextTick(() => formRef.value?.clearValidate())
+  } catch (error) {
+    dialogVisible.value = false
+    ElMessage.error(error?.message || '获取用户详情失败')
+  }
 }
-function handleClose() { Object.assign(form, { ...defaultForm }); currentId.value = null }
+function handleClose() { Object.assign(form, { ...defaultForm, roleIds: [] }); currentId.value = null }
 
 async function handleSubmit() {
-  await formRef.value.validate()
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
   submitLoading.value = true
-  await new Promise(r => setTimeout(r, 300))
-  ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
-  dialogVisible.value = false; submitLoading.value = false; getList()
+  try {
+    const data = {
+      username: form.username,
+      nickname: form.nickname,
+      phone: form.phone || null,
+      email: form.email || null,
+      orgId: form.orgId || null,
+      roleIds: form.roleIds || [],
+      status: Number(form.status),
+    }
+    if (isEdit.value) await updateUser(currentId.value, data)
+    else await createUser(data)
+    ElMessage.success(isEdit.value ? '编辑成功' : '新增成功')
+    dialogVisible.value = false
+    await getList()
+  } catch (error) {
+    ElMessage.error(error?.message || '保存用户失败')
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 async function handleDelete(row) {
-  await ElMessageBox.confirm(`确认删除用户「${row.username}」？`, '提示', { type: 'warning' })
-  ElMessage.success('删除成功'); getList()
+  try {
+    await ElMessageBox.confirm(`确认删除用户「${row.username}」？`, '提示', { type: 'warning' })
+    await deleteUser(row.id)
+    ElMessage.success('删除成功')
+    await getList()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error(error?.message || '删除用户失败')
+  }
 }
-function handleResetPwd(row) {
-  ElMessageBox.confirm(`确认重置用户「${row.username}」的密码？`, '提示', { type: 'warning' })
-    .then(() => ElMessage.success('密码已重置为 123456'))
+async function handleResetPwd(row) {
+  try {
+    await ElMessageBox.confirm(`确认重置用户「${row.username}」的密码？`, '提示', { type: 'warning' })
+    await resetUserPassword(row.id, '123456')
+    ElMessage.success('密码已重置为 123456')
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error(error?.message || '重置密码失败')
+  }
 }
-function handleStatusChange(row) {
-  ElMessage.success(`用户「${row.username}」已${row.status === '1' ? '启用' : '禁用'}`)
+async function handleStatusChange(row) {
+  const previous = row.status === '1' ? '0' : '1'
+  try {
+    await updateUserStatus(row.id, Number(row.status))
+    ElMessage.success(`用户「${row.username}」已${row.status === '1' ? '启用' : '禁用'}`)
+  } catch (error) {
+    row.status = previous
+    ElMessage.error(error?.message || '修改用户状态失败')
+  }
 }
 
-onMounted(() => getList())
+onMounted(() => {
+  getList()
+  loadOptions()
+})
 </script>
 
 <style scoped>

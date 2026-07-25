@@ -16,111 +16,11 @@
           text-color="#93b89f"
           active-text-color="#2ee68a"
         >
-          <el-menu-item index="/dashboard">
-            <el-icon><HomeFilled /></el-icon>
-            <template #title>首页</template>
-          </el-menu-item>
-
-          <el-menu-item index="/my-map">
-            <el-icon><Location /></el-icon>
-            <template #title>我的地图</template>
-          </el-menu-item>
-
-          <el-sub-menu index="/system">
-            <template #title>
-              <el-icon><Setting /></el-icon>
-              <span>系统管理</span>
-            </template>
-            <el-menu-item index="/system/user">
-              <el-icon><User /></el-icon>
-              <template #title>用户管理</template>
-            </el-menu-item>
-            <el-menu-item index="/system/role">
-              <el-icon><UserFilled /></el-icon>
-              <template #title>角色管理</template>
-            </el-menu-item>
-            <el-menu-item index="/system/menu">
-              <el-icon><Menu /></el-icon>
-              <template #title>菜单管理</template>
-            </el-menu-item>
-            <el-menu-item index="/system/org">
-              <el-icon><OfficeBuilding /></el-icon>
-              <template #title>组织管理</template>
-            </el-menu-item>
-            <el-menu-item index="/system/param">
-              <el-icon><Operation /></el-icon>
-              <template #title>参数管理</template>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="/log">
-            <template #title>
-              <el-icon><Document /></el-icon>
-              <span>日志管理</span>
-            </template>
-            <el-menu-item index="/log/operation">
-              <el-icon><Document /></el-icon>
-              <template #title>操作日志</template>
-            </el-menu-item>
-            <el-menu-item index="/log/login">
-              <el-icon><Key /></el-icon>
-              <template #title>登录日志</template>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="/demo">
-            <template #title>
-              <el-icon><Monitor /></el-icon>
-              <span>功能示例</span>
-            </template>
-            <el-menu-item index="/demo/file-preview">
-              <el-icon><Picture /></el-icon>
-              <template #title>文件预览</template>
-            </el-menu-item>
-            <el-menu-item index="/demo/list-page">
-              <el-icon><List /></el-icon>
-              <template #title>列表示例</template>
-            </el-menu-item>
-            <el-menu-item index="/demo/chart-dashboard">
-              <el-icon><PieChart /></el-icon>
-              <template #title>数据大屏</template>
-            </el-menu-item>
-            <el-menu-item index="/demo/lan-transfer">
-              <el-icon><Connection /></el-icon>
-              <template #title>局域网互传</template>
-            </el-menu-item>
-            <el-menu-item index="/demo/lan-video">
-              <el-icon><VideoCamera /></el-icon>
-              <template #title>局域网视频</template>
-            </el-menu-item>
-            <el-menu-item index="/demo/my-cesium">
-              <el-icon><Location /></el-icon>
-              <template #title>我的 Cesium</template>
-            </el-menu-item>
-            <el-menu-item index="/demo/angry-birds">
-              <el-icon><Promotion /></el-icon>
-              <template #title>愤怒的小鸟</template>
-            </el-menu-item>
-            <el-menu-item index="/demo/vr-demo">
-              <el-icon><VideoCamera /></el-icon>
-              <template #title>VR演示</template>
-            </el-menu-item>
-            <el-menu-item index="/demo/minecraft">
-              <el-icon><Box /></el-icon>
-              <template #title>我的世界</template>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <el-sub-menu index="/agent">
-            <template #title>
-              <el-icon><Cpu /></el-icon>
-              <span>智能体应用</span>
-            </template>
-            <el-menu-item index="/agent/knowledge">
-              <el-icon><ChatDotRound /></el-icon>
-              <template #title>知识库智能体</template>
-            </el-menu-item>
-          </el-sub-menu>
+          <MenuItem
+            v-for="menu in menus"
+            :key="menu.id || menu.path"
+            :menu="menu"
+          />
         </el-menu>
       </el-aside>
 
@@ -141,7 +41,7 @@
             <el-dropdown @command="handleCommand">
               <span class="user-info">
                 <el-icon><UserFilled /></el-icon>
-                <span style="margin-left: 6px">管理员</span>
+                <span style="margin-left: 6px">{{ displayName }}</span>
               </span>
               <template #dropdown>
                 <el-dropdown-menu>
@@ -176,18 +76,26 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useStore } from 'vuex'
+import MenuItem from './MenuItem.vue'
 
 const route = useRoute()
 const router = useRouter()
+const store = useStore()
 const isCollapse = ref(false)
 
+const menus = computed(() => store.state.menus)
+const displayName = computed(() => store.state.user?.nickname || store.state.user?.username || '管理员')
 const activeMenu = computed(() => route.path)
 const breadcrumbs = computed(() => route.matched.filter(r => r.meta?.title))
 
-function handleCommand(cmd) {
-  if (cmd === 'logout') {
-    localStorage.removeItem('admin_token')
-    router.push('/login')
+async function handleCommand(cmd) {
+  if (cmd !== 'logout') return
+
+  try {
+    await store.dispatch('logout', router)
+  } finally {
+    router.replace('/login')
   }
 }
 </script>

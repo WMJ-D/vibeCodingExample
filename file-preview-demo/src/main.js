@@ -6,6 +6,8 @@ import zh from 'element-plus/dist/locale/zh-cn.mjs'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
+import store from './store'
+import PermissionDirective from './directives/permission'
 import FileViewer from '@flyfish-group/file-viewer3'
 import './styles/index.scss'
 
@@ -17,6 +19,8 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 }
 
 app.use(ElementPlus, { locale: zh })
+app.use(store)
+app.use(PermissionDirective)
 app.use(router)
 app.use(FileViewer)
 app.mount('#app')

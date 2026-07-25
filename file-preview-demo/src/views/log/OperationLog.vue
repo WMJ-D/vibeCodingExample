@@ -27,8 +27,8 @@
     </el-form>
 
     <div style="margin-bottom: 12px">
-      <el-button type="danger" icon="Delete" :disabled="!selectedIds.length" @click="handleBatchDelete">批量删除</el-button>
-      <el-button type="warning" icon="Download" @click="handleExport">导出</el-button>
+      <el-button v-permission="'log:operation:delete'" type="danger" icon="Delete" :disabled="!selectedIds.length" @click="handleBatchDelete">批量删除</el-button>
+      <el-button v-permission="'log:operation:export'" type="warning" icon="Download" @click="handleExport">导出</el-button>
     </div>
 
     <el-table v-loading="loading" :data="tableData" border stripe @selection-change="handleSelectionChange">
@@ -64,6 +64,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { batchDeleteOperationLogs, exportOperationLogs, getOperationLogList } from '@/api/log'
 
 const loading = ref(false)
 const tableData = ref([])
@@ -71,45 +72,66 @@ const total = ref(0)
 const selectedIds = ref([])
 const query = reactive({ module: '', operator: '', type: '', dateRange: null, pageNum: 1, pageSize: 10 })
 
-const modules = ['用户管理', '角色管理', '菜单管理', '组织管理', '登录', '导出']
-const types = ['新增', '修改', '删除', '查询', '导出']
-const operators = ['admin', '张三', '李四', '王五']
-const descriptions = ['新增用户 user10', '修改角色 编辑', '删除菜单 测试菜单', '查询用户列表', '导出用户数据', '用户登录系统']
-
-const mockData = Array.from({ length: 68 }, (_, i) => ({
-  id: i + 1,
-  module: modules[i % modules.length],
-  type: types[i % types.length],
-  description: descriptions[i % descriptions.length],
-  operator: operators[i % operators.length],
-  ip: `192.168.1.${100 + (i % 50)}`,
-  status: i % 7 === 0 ? '失败' : '成功',
-  operTime: `2026-03-${String(23 - (i % 23)).padStart(2, '0')} ${String(8 + (i % 14)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}:00`,
-}))
+function getQueryParams(includePagination = true) {
+  const params = {
+    module: query.module,
+    operator: query.operator,
+    type: query.type,
+    dateRange: query.dateRange || undefined,
+  }
+  if (includePagination) {
+    params.pageNum = query.pageNum
+    params.pageSize = query.pageSize
+  }
+  return params
+}
 
 async function getList() {
   loading.value = true
-  await new Promise(r => setTimeout(r, 300))
-  let filtered = mockData.filter(item => {
-    if (query.module && !item.module.includes(query.module)) return false
-    if (query.operator && !item.operator.includes(query.operator)) return false
-    if (query.type && item.type !== query.type) return false
-    return true
-  })
-  total.value = filtered.length
-  const start = (query.pageNum - 1) * query.pageSize
-  tableData.value = filtered.slice(start, start + query.pageSize)
-  loading.value = false
+  try {
+    const result = await getOperationLogList(getQueryParams())
+    tableData.value = result?.list || []
+    total.value = Number(result?.total) || 0
+    selectedIds.value = []
+  } catch (error) {
+    tableData.value = []
+    total.value = 0
+    ElMessage.error(error?.message || '操作日志查询失败')
+  } finally {
+    loading.value = false
+  }
 }
 function search() { query.pageNum = 1; getList() }
 function reset() { Object.assign(query, { module: '', operator: '', type: '', dateRange: null, pageNum: 1 }); getList() }
 function handleSelectionChange(rows) { selectedIds.value = rows.map(r => r.id) }
 
 async function handleBatchDelete() {
-  await ElMessageBox.confirm(`确认删除选中的 ${selectedIds.value.length} 条记录？`, '提示', { type: 'warning' })
-  ElMessage.success('删除成功'); getList()
+  try {
+    await ElMessageBox.confirm(`确认删除选中的 ${selectedIds.value.length} 条记录？`, '提示', { type: 'warning' })
+    await batchDeleteOperationLogs(selectedIds.value)
+    ElMessage.success('删除成功')
+    if (tableData.value.length === selectedIds.value.length && query.pageNum > 1) query.pageNum -= 1
+    await getList()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error(error?.message || '删除失败')
+  }
 }
-function handleExport() { ElMessage.success('导出成功（演示）') }
+async function handleExport() {
+  try {
+    const blob = await exportOperationLogs(getQueryParams(false))
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'operation-logs.csv'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error(error?.message || '导出失败')
+  }
+}
 
 onMounted(() => getList())
 </script>
