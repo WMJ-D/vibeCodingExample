@@ -51,6 +51,11 @@
         </template>
       </el-table-column>
       <el-table-column prop="operTime" label="操作时间" width="170" align="center" />
+      <el-table-column label="详情" width="80" align="center" fixed="right">
+        <template #default="{ row }">
+          <el-button type="primary" link icon="View" @click="openDetail(row)">详情</el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <div style="margin-top: 16px; display: flex; justify-content: flex-end">
@@ -58,6 +63,23 @@
         :total="total" :page-sizes="[10, 20, 50]" background layout="total, sizes, prev, pager, next, jumper"
         @size-change="getList" @current-change="getList" />
     </div>
+
+    <el-dialog v-model="detailVisible" title="操作日志详情" width="720px" destroy-on-close>
+      <el-descriptions :column="1" border size="small">
+        <el-descriptions-item label="操作模块">{{ detail?.module }}</el-descriptions-item>
+        <el-descriptions-item label="操作类型">{{ detail?.type }}</el-descriptions-item>
+        <el-descriptions-item label="操作描述">{{ detail?.description }}</el-descriptions-item>
+        <el-descriptions-item label="操作人">{{ detail?.operator }}</el-descriptions-item>
+        <el-descriptions-item label="请求方式">{{ detail?.requestMethod }}</el-descriptions-item>
+        <el-descriptions-item label="请求地址">{{ detail?.requestUrl }}</el-descriptions-item>
+      </el-descriptions>
+
+      <el-divider content-position="left">请求参数</el-divider>
+      <pre class="json-view">{{ formatJson(detail?.requestParams) }}</pre>
+
+      <el-divider content-position="left">响应结果</el-divider>
+      <pre class="json-view">{{ formatJson(detail?.responseResult) }}</pre>
+    </el-dialog>
   </div>
 </template>
 
@@ -71,6 +93,22 @@ const tableData = ref([])
 const total = ref(0)
 const selectedIds = ref([])
 const query = reactive({ module: '', operator: '', type: '', dateRange: null, pageNum: 1, pageSize: 10 })
+
+const detailVisible = ref(false)
+const detail = ref(null)
+
+function openDetail(row) {
+  detail.value = row
+  detailVisible.value = true
+}
+function formatJson(value) {
+  if (value == null) return '—'
+  try {
+    return typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
+}
 
 function getQueryParams(includePagination = true) {
   const params = {
@@ -138,4 +176,19 @@ onMounted(() => getList())
 
 <style scoped>
 .page-container { padding: 20px; background: #fff; border-radius: 4px; }
+.json-view {
+  margin: 0;
+  padding: 12px;
+  max-height: 320px;
+  overflow: auto;
+  background: #f7f8fa;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: Consolas, Menlo, Monaco, 'Courier New', monospace;
+  color: #303133;
+}
 </style>
