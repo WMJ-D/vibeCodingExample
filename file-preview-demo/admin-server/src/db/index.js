@@ -10,9 +10,23 @@ export const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: env.DB_CONNECTION_LIMIT,
   timezone: '+08:00',
+  dateStrings: true,
+  typeCast(field, next) {
+    if (field.type === 'DATETIME' || field.type === 'TIMESTAMP') {
+      const value = field.string()
+      return value ? value.replace(/\.\d+$/, '') : value
+    }
+    return next()
+  },
   decimalNumbers: true,
   supportBigNumbers: true,
   bigNumberStrings: true
+})
+
+pool.on('connection', connection => {
+  connection.query("SET time_zone = '+08:00'", error => {
+    if (error) console.error('设置数据库会话时区失败', error)
+  })
 })
 
 let database = pool
