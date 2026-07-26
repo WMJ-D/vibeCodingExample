@@ -30,10 +30,8 @@
             </div>
           </div>
           <div class="bubble" :class="{ streaming: item.streaming }">
-            <template v-for="(block, index) in renderBlocks(item.content)" :key="index">
-              <pre v-if="block.type === 'code'" class="code-block"><code>{{ block.content }}</code></pre>
-              <p v-else class="text-block">{{ block.content }}</p>
-            </template>
+            <div v-if="item.role === 'assistant' && item.content" class="ai-markdown-content" v-html="renderMarkdown(item.content)"></div>
+            <p v-else-if="item.content" class="text-block">{{ item.content }}</p>
             <span v-if="item.streaming" class="cursor"></span>
             <span v-if="item.thinking && !item.content" class="thinking">正在思考...</span>
           </div>
@@ -94,6 +92,7 @@
 import { computed, nextTick, onBeforeUnmount, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { streamChat } from '@/api/ai'
+import { renderMarkdown } from '@/utils/markdown'
 
 const MAX_FILES = 5
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -129,21 +128,6 @@ function scrollToBottom() {
     const element = messageListRef.value
     if (element) element.scrollTop = element.scrollHeight
   })
-}
-
-function renderBlocks(content = '') {
-  if (!content) return []
-  const blocks = []
-  const regex = /```(?:[\w-]+)?\n?([\s\S]*?)```/g
-  let lastIndex = 0
-  let match
-  while ((match = regex.exec(content))) {
-    if (match.index > lastIndex) blocks.push({ type: 'text', content: content.slice(lastIndex, match.index) })
-    blocks.push({ type: 'code', content: match[1].trimEnd() })
-    lastIndex = regex.lastIndex
-  }
-  if (lastIndex < content.length) blocks.push({ type: 'text', content: content.slice(lastIndex) })
-  return blocks
 }
 
 function formatSize(size) {
@@ -361,7 +345,44 @@ onBeforeUnmount(() => {
 }
 .user .bubble { background: #176b43; border-color: #1f8f58; border-radius: 14px 4px 14px 14px; color: #fff; }
 .text-block { margin: 0; white-space: pre-wrap; }
-.text-block + .text-block, .code-block + .text-block, .text-block + .code-block { margin-top: 10px; }
+.ai-markdown-content { min-width: 0; background: transparent !important; color: inherit; }
+.ai-markdown-content :deep(p) { margin: 0 0 10px; white-space: normal; }
+.ai-markdown-content :deep(p:last-child) { margin-bottom: 0; }
+.ai-markdown-content :deep(h1),
+.ai-markdown-content :deep(h2),
+.ai-markdown-content :deep(h3),
+.ai-markdown-content :deep(h4),
+.ai-markdown-content :deep(h5),
+.ai-markdown-content :deep(h6) { margin: 18px 0 9px; color: #f1fff6; line-height: 1.35; }
+.ai-markdown-content :deep(h1:first-child),
+.ai-markdown-content :deep(h2:first-child),
+.ai-markdown-content :deep(h3:first-child) { margin-top: 0; }
+.ai-markdown-content :deep(h1) { font-size: 22px; border-bottom: 1px solid #285c3d; padding-bottom: 7px; }
+.ai-markdown-content :deep(h2) { font-size: 19px; border-bottom: 1px solid #173f2a; padding-bottom: 5px; }
+.ai-markdown-content :deep(h3) { font-size: 17px; }
+.ai-markdown-content :deep(h4), .ai-markdown-content :deep(h5), .ai-markdown-content :deep(h6) { font-size: 15px; }
+.ai-markdown-content :deep(ul), .ai-markdown-content :deep(ol) { margin: 8px 0 12px; padding-left: 24px; }
+.ai-markdown-content :deep(li) { margin: 4px 0; }
+.ai-markdown-content :deep(blockquote) { margin: 10px 0; padding: 8px 13px; border-left: 4px solid #2ee68a; background: #0b1810; color: #a8cfb5; }
+.ai-markdown-content :deep(a) { color: #61e99c; text-decoration: underline; text-underline-offset: 3px; }
+.ai-markdown-content :deep(strong) { color: #f1fff6; }
+.ai-markdown-content :deep(del) { color: #6f9c7e; }
+.ai-markdown-content :deep(hr) { border: 0; border-top: 1px solid #285c3d; margin: 16px 0; }
+.ai-markdown-content :deep(code) { padding: 2px 5px; border-radius: 4px; background: #07120c; color: #ffcf7d; font: 13px Consolas, Monaco, 'Courier New', monospace; }
+.ai-markdown-content :deep(pre) {
+  margin: 10px 0;
+  padding: 13px 15px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: #07120c;
+  border: 1px solid #173f2a;
+}
+.ai-markdown-content :deep(pre code) { padding: 0; background: transparent; color: #bfffd9; line-height: 1.65; white-space: pre; }
+.ai-markdown-content :deep(.markdown-table-wrap) { max-width: 100%; overflow-x: auto; margin: 10px 0; }
+.ai-markdown-content :deep(table) { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ai-markdown-content :deep(th), .ai-markdown-content :deep(td) { padding: 8px 10px; border: 1px solid #285c3d; text-align: left; }
+.ai-markdown-content :deep(th) { background: #173f2a; color: #f1fff6; }
+.ai-markdown-content :deep(tr:nth-child(even) td) { background: rgba(23, 63, 42, .25); }
 .code-block {
   margin: 0;
   padding: 12px 14px;

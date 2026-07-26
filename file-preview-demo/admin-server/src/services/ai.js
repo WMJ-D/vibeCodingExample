@@ -2,6 +2,10 @@ import { env } from '../config/env.js'
 import { AppError } from '../middleware/error.js'
 
 const CHAT_COMPLETIONS_PATH = '/chat/completions'
+const MARKDOWN_SYSTEM_MESSAGE = {
+  role: 'system',
+  content: '请始终使用规范的 Markdown 格式回答。合理使用标题、段落、列表、引用、表格和代码块；代码块必须标注语言。不要输出 HTML 标签。'
+}
 
 function gatewayUrl() {
   return `${env.AI_GATEWAY_BASE_URL.replace(/\/$/, '')}${CHAT_COMPLETIONS_PATH}`
@@ -36,7 +40,7 @@ export async function streamAiCompletion({ messages, signal, onDelta, onThinking
     },
     body: JSON.stringify({
       model: env.AI_MODEL,
-      messages,
+      messages: [MARKDOWN_SYSTEM_MESSAGE, ...messages],
       stream: true
     }),
     signal
