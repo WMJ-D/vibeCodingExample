@@ -638,6 +638,7 @@ function flyToHubei() {
 
 async function init() {
   try {
+    if (window.cesiumResourcesReady) await window.cesiumResourcesReady
     assertCesiumGlobals()
     initViewer()
     if (layerVisible.tdt) addTDT()

@@ -3,18 +3,57 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>多类型文件预览 Demo</title>
+  <title>我的示例中后台管理系统</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link
-    rel="stylesheet"
-    href="http://10.10.130.72:8086/static/libs/cdn/cesium/Widgets/widgets.css"
-  />
-  <!--加载不同版本Cesium库-->
-  <script src="http://10.10.130.72:8086/static/libs/cdn/cesium/Cesium.js"></script>
-  <!--plugin脚本库-->
-  <script src="http://10.10.130.72:8086/static/libs/cdn/zondyclient/webclient-common.min.js"></script>
-  <script src="http://10.10.130.72:8086/static/libs/cdn/zondyclient/webclient-cesium-plugin.min.js"></script>
-  <script src="http://10.10.130.72:8086/static/assets/js/TDT-token.js"></script>
+  <script>
+    (() => {
+      const baseUrl = 'http://10.10.130.72:8086/static'
+      const stylesheetUrl = `${baseUrl}/libs/cdn/cesium/Widgets/widgets.css`
+      const scriptUrls = [
+        `${baseUrl}/libs/cdn/cesium/Cesium.js`,
+        `${baseUrl}/libs/cdn/zondyclient/webclient-common.min.js`,
+        `${baseUrl}/libs/cdn/zondyclient/webclient-cesium-plugin.min.js`,
+        `${baseUrl}/assets/js/TDT-token.js`,
+      ]
+
+      function loadStylesheet(href) {
+        return new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+          link.rel = 'stylesheet'
+          link.href = href
+          link.onload = () => resolve(href)
+          link.onerror = () => reject(new Error(`样式加载失败：${href}`))
+          document.head.appendChild(link)
+        })
+      }
+
+      function loadScript(src) {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+          script.src = src
+          script.async = true
+          script.onload = () => resolve(src)
+          script.onerror = () => reject(new Error(`脚本加载失败：${src}`))
+          document.head.appendChild(script)
+        })
+      }
+
+      async function loadCesiumResources() {
+        if (window.Cesium && window.zondy?.cesium && window.getTDTToken) return
+        const stylesheetReady = loadStylesheet(stylesheetUrl)
+        const scriptsReady = (async () => {
+          for (const src of scriptUrls) await loadScript(src)
+        })()
+        await Promise.all([stylesheetReady, scriptsReady])
+      }
+
+      window.cesiumResourcesReady = new Promise((resolve, reject) => {
+        window.addEventListener('load', () => {
+          loadCesiumResources().then(resolve).catch(reject)
+        }, { once: true })
+      })
+    })()
+  </script>
 </head>
 
 <body>
