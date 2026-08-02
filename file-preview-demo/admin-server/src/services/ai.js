@@ -41,7 +41,8 @@ export async function streamAiCompletion({ messages, signal, onDelta, onThinking
     body: JSON.stringify({
       model: env.AI_MODEL,
       messages: [MARKDOWN_SYSTEM_MESSAGE, ...messages],
-      stream: true
+      stream: true,
+      "reasoning_effort": "xhigh"
     }),
     signal
   })
