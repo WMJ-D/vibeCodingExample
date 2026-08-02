@@ -77,12 +77,15 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import { useSessionHeartbeat } from '@/composables/useSessionHeartbeat'
 import MenuItem from './MenuItem.vue'
 
 const route = useRoute()
 const router = useRouter()
 const store = useStore()
 const isCollapse = ref(false)
+
+useSessionHeartbeat()
 
 const menus = computed(() => store.state.menus)
 const displayName = computed(() => store.state.user?.nickname || store.state.user?.username || '管理员')

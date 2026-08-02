@@ -6,6 +6,7 @@ process.env.NODE_ENV = 'test'
 process.env.JWT_SECRET = 'test-secret-at-least-32-characters-long'
 
 const adminHash = await hashPassword('123456')
+const activeSessions = new Set()
 const mockDb = {
   query: vi.fn(async (sql, params = []) => {
     if (sql === 'SELECT 1') return [[{ 1: 1 }], []]
@@ -13,9 +14,16 @@ const mockDb = {
     if (sql.includes('FROM sys_user u LEFT JOIN sys_org')) return [[{ id: 1, username: 'admin', nickname: '超级管理员', phone: null, email: null, avatar_url: null, status: 1, org_id: 1, org_name: '总公司' }], []]
     if (sql.includes('SELECT r.id,r.role_name,r.role_key')) return [[{ id: 1, role_name: '超级管理员', role_key: 'admin' }], []]
     if (sql.includes('SELECT DISTINCT m.permission')) return [[{ permission: 'system:user:list' }], []]
-    if (sql.startsWith('UPDATE sys_user')) return [{ affectedRows: 1 }, []]
+    if (sql.startsWith('UPDATE sys_user SET')) return [{ affectedRows: 1 }, []]
     if (sql.startsWith('INSERT INTO sys_login_log')) return [{ insertId: 1 }, []]
+    if (sql.includes('INSERT INTO sys_user_session')) { activeSessions.add(params[0]); return [{ insertId: activeSessions.size }, []] }
+    if (sql.includes('SELECT status,expires_at FROM sys_user_session')) {
+      return activeSessions.has(params[0]) ? [[{ status: 'ACTIVE', expires_at: new Date(Date.now() + 3600000) }], []] : [[], []]
+    }
+    if (sql.includes("UPDATE sys_user_session SET last_active_at")) return [{ affectedRows: 1 }, []]
+    if (sql.includes("UPDATE sys_user_session SET status='LOGOUT'")) { activeSessions.delete(params[0]); return [{ affectedRows: 1 }, []] }
     if (sql.includes('SELECT DISTINCT m.* FROM sys_menu')) return [[{ id: 100, parent_id: null, menu_name: '首页', menu_type: 'C', path: '/dashboard', status: 1 }], []]
+    if (sql.includes('AS today_visit_count')) return [[{ user_count: 8, role_count: 3, menu_count: 24, today_visit_count: 2 }], []]
     return [[], []]
   })
 }
@@ -53,6 +61,33 @@ describe('基础能力', () => {
     const menus = await request(app).get('/api/v1/auth/menus').set(headers)
     expect(menus.status).toBe(200)
     expect(menus.body.data[0].menuName).toBe('首页')
+  })
+
+  it('登录后可获取首页统计数据', async () => {
+    const login = await request(app).post('/api/v1/auth/login').send({ username: 'admin', password: '123456' })
+    const response = await request(app)
+      .get('/api/v1/dashboard/statistics')
+      .set({ Authorization: `Bearer ${login.body.data.token}` })
+
+    expect(response.status).toBe(200)
+    expect(response.body.data).toEqual({
+      userCount: 8,
+      roleCount: 3,
+      menuCount: 24,
+      todayVisitCount: 2,
+    })
+  })
+
+  it('登录会话支持心跳和退出', async () => {
+    const login = await request(app).post('/api/v1/auth/login').send({ username: 'admin', password: '123456' })
+    const headers = { Authorization: `Bearer ${login.body.data.token}` }
+    const heartbeat = await request(app).post('/api/v1/auth/heartbeat').set(headers)
+    expect(heartbeat.status).toBe(200)
+    const logout = await request(app).post('/api/v1/auth/logout').set(headers)
+    expect(logout.status).toBe(200)
+    const me = await request(app).get('/api/v1/auth/me').set(headers)
+    expect(me.status).toBe(401)
+    expect(me.body.code).toBe('INVALID_SESSION')
   })
 
   it('未认证请求被拒绝', async () => {

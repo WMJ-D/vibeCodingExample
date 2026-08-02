@@ -253,16 +253,30 @@
 <script setup>
 import { Search, Loading, ArrowRight, Folder, FolderOpened, Link, Download } from '@element-plus/icons-vue'
 import { ref, onMounted, onUnmounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { getDashboardStatistics } from '@/api/dashboard'
 import { useBookmarkStore } from '@/composables/useBookmarkStore'
 import { useExtensionDownload } from '@/composables/useExtensionDownload'
 
 /* ---------- 统计卡片 ---------- */
-const stats = [
-  { title: '用户总数', value: '1,280', icon: 'User', color: '#2ee68a' },
-  { title: '角色数量', value: '12', icon: 'UserFilled', color: '#67c23a' },
-  { title: '菜单数量', value: '36', icon: 'Menu', color: '#e6a23c' },
-  { title: '今日访问', value: '892', icon: 'View', color: '#f56c6c' },
-]
+const stats = ref([
+  { title: '用户总数', value: '0', icon: 'User', color: '#2ee68a' },
+  { title: '角色数量', value: '0', icon: 'UserFilled', color: '#67c23a' },
+  { title: '菜单数量', value: '0', icon: 'Menu', color: '#e6a23c' },
+  { title: '今日访问', value: '0', icon: 'View', color: '#f56c6c' },
+])
+
+async function loadStatistics() {
+  try {
+    const { userCount, roleCount, menuCount, todayVisitCount } = await getDashboardStatistics()
+    stats.value[0].value = Number(userCount || 0).toLocaleString('zh-CN')
+    stats.value[1].value = Number(roleCount || 0).toLocaleString('zh-CN')
+    stats.value[2].value = Number(menuCount || 0).toLocaleString('zh-CN')
+    stats.value[3].value = Number(todayVisitCount || 0).toLocaleString('zh-CN')
+  } catch (error) {
+    ElMessage.error(error.message || '首页统计数据加载失败')
+  }
+}
 
 /* ---------- 时钟 ---------- */
 const currentTime = ref('')
@@ -296,6 +310,7 @@ const { downloading, downloadExtension } = useExtensionDownload()
 onMounted(() => {
   updateTime()
   timer = setInterval(updateTime, 1000)
+  loadStatistics()
   loadBookmarks()
 })
 onUnmounted(() => clearInterval(timer))
