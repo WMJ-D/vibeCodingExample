@@ -26,6 +26,20 @@ describe('HTTP 基础契约', () => {
     expect(response.body).toMatchObject({ code: 'NOT_FOUND', message: '接口不存在' })
   })
 
+  it('首页统计路由要求认证', async () => {
+    const response = await request(app).get('/api/v1/dashboard/statistics')
+
+    expect(response.status).toBe(401)
+    expect(response.body).toMatchObject({ code: 'UNAUTHORIZED', message: '请先登录' })
+  })
+
+  it('在线用户路由要求认证', async () => {
+    const response = await request(app).get('/api/v1/logs/online')
+
+    expect(response.status).toBe(401)
+    expect(response.body).toMatchObject({ code: 'UNAUTHORIZED', message: '请先登录' })
+  })
+
   it('系统管理路由要求认证', async () => {
     const response = await request(app).get('/api/v1/system/users')
 

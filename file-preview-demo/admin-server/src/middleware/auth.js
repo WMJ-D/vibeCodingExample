@@ -11,6 +11,20 @@ export const authenticate = asyncHandler(async (req, _res, next) => {
   } catch {
     throw new AppError(401, '登录凭证无效或已过期', 'INVALID_TOKEN')
   }
+
+  if (!req.user.jti) throw new AppError(401, '登录会话无效，请重新登录', 'INVALID_SESSION')
+  const [sessions] = await getDb().query(
+    'SELECT status,expires_at FROM sys_user_session WHERE session_id=? AND user_id=? LIMIT 1',
+    [req.user.jti, req.user.sub]
+  )
+  const session = sessions[0]
+  if (!session) throw new AppError(401, '登录会话不存在，请重新登录', 'INVALID_SESSION')
+  if (session.status === 'KICKED') throw new AppError(401, '当前账号已被管理员强制下线', 'SESSION_KICKED')
+  if (session.status !== 'ACTIVE') throw new AppError(401, '登录会话已失效，请重新登录', 'SESSION_INACTIVE')
+  if (new Date(session.expires_at).getTime() <= Date.now()) {
+    await getDb().query("UPDATE sys_user_session SET status='EXPIRED' WHERE session_id=? AND status='ACTIVE'", [req.user.jti])
+    throw new AppError(401, '登录会话已过期，请重新登录', 'SESSION_EXPIRED')
+  }
   next()
 })
 

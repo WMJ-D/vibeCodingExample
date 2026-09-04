@@ -20,6 +20,7 @@ import authRouter from './routes/auth.js'
 import systemRouter from './routes/system.js'
 import logsRouter from './routes/logs.js'
 import aiRouter from './routes/ai.js'
+import dashboardRouter from './routes/dashboard.js'
 
 export function createApp({ appLogger = logger } = {}) {
   const app = express()
@@ -36,6 +37,7 @@ export function createApp({ appLogger = logger } = {}) {
   app.use('/api/v1/system', systemRouter)
   app.use('/api/v1/logs', logsRouter)
   app.use('/api/v1/ai', aiRouter)
+  app.use('/api/v1/dashboard', dashboardRouter)
   app.use(notFound)
   app.use(errorHandler)
   return app

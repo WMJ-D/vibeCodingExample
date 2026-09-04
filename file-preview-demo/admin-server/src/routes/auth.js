@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { Router } from 'express'
 import jwt from 'jsonwebtoken'
 import { rateLimit } from 'express-rate-limit'
@@ -61,7 +62,17 @@ router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
   }
   const identity = await loadIdentity(user.id)
   const roleKeys = identity.roles.map(role => role.roleKey)
-  const token = jwt.sign({ sub: String(user.id), username: user.username, roles: roleKeys }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN })
+  const sessionId = randomUUID()
+  const token = jwt.sign({ sub: String(user.id), username: user.username, roles: roleKeys, jti: sessionId }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN })
+  const decoded = jwt.decode(token)
+  const userAgent = req.headers['user-agent'] || ''
+  const { browser, os } = parseUserAgent(userAgent)
+  await getDb().query(
+    `INSERT INTO sys_user_session
+     (session_id,user_id,username,ip_address,browser,os,user_agent,expires_at)
+     VALUES (?,?,?,?,?,?,?,FROM_UNIXTIME(?))`,
+    [sessionId, user.id, user.username, getClientIp(req), browser, os, userAgent, decoded.exp]
+  )
   await getDb().query('UPDATE sys_user SET last_login_ip=?,last_login_at=CURRENT_TIMESTAMP(3) WHERE id=?', [getClientIp(req), user.id])
   await writeLoginLog(req, { userId: user.id, username: user.username, status: 1, message: '登录成功' })
   ok(res, { token, tokenType: 'Bearer', expiresIn: env.JWT_EXPIRES_IN, user: identity }, '登录成功')
@@ -80,6 +91,20 @@ router.get('/menus', authenticate, asyncHandler(async (req, res) => {
   ok(res, buildTree(rows.map(toCamelRow)))
 }))
 
-router.post('/logout', authenticate, (_req, res) => ok(res, null, '退出成功'))
+router.post('/heartbeat', authenticate, asyncHandler(async (req, res) => {
+  await getDb().query(
+    "UPDATE sys_user_session SET last_active_at=CURRENT_TIMESTAMP(3) WHERE session_id=? AND status='ACTIVE'",
+    [req.user.jti]
+  )
+  ok(res)
+}))
+
+router.post('/logout', authenticate, asyncHandler(async (req, res) => {
+  await getDb().query(
+    "UPDATE sys_user_session SET status='LOGOUT',logout_at=CURRENT_TIMESTAMP(3) WHERE session_id=? AND status='ACTIVE'",
+    [req.user.jti]
+  )
+  ok(res, null, '退出成功')
+}))
 
 export default router

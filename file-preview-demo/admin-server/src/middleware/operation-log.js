@@ -15,11 +15,12 @@ const metaMap = {
 }
 
 const MODULE_MAP = {
-  users: '用户管理', roles: '角色管理', menus: '菜单管理', orgs: '组织管理', params: '参数管理', logs: '日志管理'
+  users: '用户管理', roles: '角色管理', menus: '菜单管理', orgs: '组织管理', params: '参数管理', logs: '日志管理', online: '在线用户'
 }
 
 function inferModule(path) {
-  const name = path.split('/')[1] || '系统'
+  const parts = path.split('/').filter(Boolean)
+  const name = parts.includes('online') ? 'online' : parts[0] || '系统'
   return MODULE_MAP[name] || name
 }
 
