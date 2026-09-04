@@ -8,6 +8,7 @@
           <span v-show="!isCollapse" class="logo-text">{{ systemName }}</span>
         </div>
         <el-menu
+          class="aside-menu"
           :default-active="activeMenu"
           :collapse="isCollapse"
           :collapse-transition="false"
@@ -151,24 +152,41 @@ async function handleCommand(cmd) {
   height: 100vh;
 }
 .aside {
+  display: flex;
+  flex-direction: column;
   background-color: var(--theme-bg);
-  overflow-y: auto;
+  overflow: hidden;
   transition: width 0.3s;
 }
-.aside::-webkit-scrollbar {
+.aside-menu {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.aside-menu:hover {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-primary-dim) var(--theme-bg-deep);
+}
+.aside-menu::-webkit-scrollbar {
+  width: 0;
+}
+.aside-menu:hover::-webkit-scrollbar {
   width: 6px;
 }
-.aside::-webkit-scrollbar-track {
+.aside-menu::-webkit-scrollbar-track {
   background: var(--theme-bg-deep);
 }
-.aside::-webkit-scrollbar-thumb {
+.aside-menu::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: var(--theme-primary-dim);
 }
-.aside::-webkit-scrollbar-thumb:hover {
+.aside-menu::-webkit-scrollbar-thumb:hover {
   background: var(--theme-primary);
 }
 .logo {
+  flex-shrink: 0;
   height: 50px;
   display: flex;
   align-items: center;

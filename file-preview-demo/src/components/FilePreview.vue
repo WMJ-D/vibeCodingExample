@@ -107,9 +107,14 @@
 </template>
 
 <script setup>
-import { computed, getCurrentInstance, onBeforeUnmount, ref } from 'vue'
+import { computed, getCurrentInstance, onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
+
+const props = defineProps({
+  file: { type: Object, default: null },
+  url: { type: String, default: '' },
+})
 
 const instance = getCurrentInstance()
 
@@ -118,6 +123,30 @@ const objectUrl = ref('')
 const remoteDraft = ref('')
 const remoteUrl = ref('')
 const textContent = ref('')
+
+function applyExternalSource(file, url) {
+  if (file) {
+    revokeObjectUrl()
+    selectedFile.value = file
+    objectUrl.value = URL.createObjectURL(file)
+    remoteUrl.value = ''
+    textContent.value = ''
+    if (isTextFile(file)) readTextFile(file)
+    return
+  }
+  if (url) {
+    revokeObjectUrl()
+    selectedFile.value = null
+    remoteUrl.value = url
+    textContent.value = ''
+  }
+}
+
+watch(() => [props.file, props.url], ([file, url]) => applyExternalSource(file, url), { immediate: true })
+
+function isTextFile(file) {
+  return isTextMime(file.type) || /\.(txt|md|json|log|xml|html|css|js|ts|vue|py|java|c|cpp|go|rs)$/i.test(file.name || '')
+}
 
 const flyfishViewer = computed(() => {
   const components = instance?.appContext?.components || {}
