@@ -2,6 +2,8 @@ import { getToken, removeToken } from './token'
 
 const BASE_URL = '/api/v1'
 const SUCCESS_CODES = new Set([0, 200])
+// 多子系统架构：统一携带子系统标识请求头（运行时配置，来自 public/config.js）
+const APP_ID = window.__APP_CONFIG__?.appId || ''
 
 export class RequestError extends Error {
   constructor(message, options = {}) {
@@ -64,6 +66,9 @@ export async function request(url, options = {}) {
   const token = getToken()
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
+  }
+  if (APP_ID && !headers.has('X-App-Id')) {
+    headers.set('X-App-Id', APP_ID)
   }
 
   let body

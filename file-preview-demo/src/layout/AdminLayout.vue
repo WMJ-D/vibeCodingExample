@@ -5,7 +5,7 @@
       <el-aside :width="isCollapse ? '64px' : '220px'" class="aside">
         <div class="logo">
           <el-icon :size="24"><Setting /></el-icon>
-          <span v-show="!isCollapse" class="logo-text">后台管理</span>
+          <span v-show="!isCollapse" class="logo-text">{{ systemName }}</span>
         </div>
         <el-menu
           :default-active="activeMenu"
@@ -97,9 +97,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import {
+  ref,
+  computed,
+  onMounted
+} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import { getSystemName } from '@/api/config'
 import { useSessionHeartbeat } from '@/composables/useSessionHeartbeat'
 import { useTheme } from '@/composables/useTheme'
 import MenuItem from './MenuItem.vue'
@@ -114,9 +119,21 @@ const { currentTheme, applyTheme, themeGroups } = useTheme()
 useSessionHeartbeat()
 
 const menus = computed(() => store.state.menus)
+const systemName = ref('后台管理系统')
 const displayName = computed(() => store.state.user?.nickname || store.state.user?.username || '管理员')
 const activeMenu = computed(() => route.path)
 const breadcrumbs = computed(() => route.matched.filter(r => r.meta?.title))
+
+async function loadSystemName() {
+  try {
+    const result = await getSystemName()
+    if (result?.name) systemName.value = result.name
+  } catch {
+    systemName.value = '后台管理系统'
+  }
+}
+
+onMounted(loadSystemName)
 
 async function handleCommand(cmd) {
   if (cmd !== 'logout') return

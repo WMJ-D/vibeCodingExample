@@ -1,6 +1,11 @@
 <template>
   <div class="page-container">
     <el-form :model="query" inline>
+      <el-form-item label="所属系统">
+        <el-select v-model="query.appId" placeholder="请选择" clearable filterable style="width: 150px">
+          <el-option v-for="app in appOptions" :key="app.appId" :label="app.appName" :value="app.appId" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="用户名">
         <el-input v-model="query.username" placeholder="请输入用户名" clearable @keyup.enter="search" />
       </el-form-item>
@@ -28,6 +33,9 @@
     <el-table v-loading="loading" :data="tableData" border stripe @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="50" align="center" :selectable="row => !row.isCurrent" />
       <el-table-column type="index" label="序号" width="60" align="center" />
+      <el-table-column prop="appName" label="所属系统" width="110" align="center">
+        <template #default="{ row }">{{ row.appName || row.appId || '—' }}</template>
+      </el-table-column>
       <el-table-column prop="username" label="用户名" width="120" />
       <el-table-column prop="nickname" label="用户昵称" width="120" />
       <el-table-column prop="orgName" label="所属组织" width="140" show-overflow-tooltip />
@@ -86,13 +94,24 @@ import {
   getOnlineUserList,
   kickOnlineSession,
 } from '@/api/log'
+import { getAppList } from '@/api/app'
 
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
 const selectedSessionIds = ref([])
-const query = reactive({ username: '', ip: '', pageNum: 1, pageSize: 10 })
+const appOptions = ref([])
+const query = reactive({ appId: '', username: '', ip: '', pageNum: 1, pageSize: 10 })
 let refreshTimer = null
+
+async function loadApps() {
+  try {
+    const result = await getAppList({ pageNum: 1, pageSize: 100 })
+    appOptions.value = (result?.list || []).filter(item => item.status === '1' || item.status === 1)
+  } catch {
+    appOptions.value = []
+  }
+}
 
 async function getList(silent = false) {
   if (!silent) loading.value = true
@@ -180,6 +199,7 @@ function stopRefresh() {
 
 onMounted(() => {
   getList()
+  loadApps()
   startRefresh()
 })
 onUnmounted(stopRefresh)

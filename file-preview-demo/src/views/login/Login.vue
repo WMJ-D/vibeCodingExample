@@ -1,7 +1,7 @@
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h2>后台管理系统</h2>
+      <h2>{{ systemName }}</h2>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="0">
         <el-form-item prop="username">
           <el-input v-model="form.username" prefix-icon="User" placeholder="请输入用户名" size="large" />
@@ -21,16 +21,29 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { ElMessage } from 'element-plus'
+import { getSystemName } from '@/api/config'
 
 const route = useRoute()
 const router = useRouter()
 const store = useStore()
 const formRef = ref(null)
 const loading = ref(false)
+const systemName = ref('后台管理系统')
+
+async function loadSystemName() {
+  try {
+    const result = await getSystemName()
+    if (result?.name) systemName.value = result.name
+  } catch {
+    systemName.value = '后台管理系统'
+  }
+}
+
+onMounted(loadSystemName)
 
 const form = reactive({ username: '', password: '' })
 const rules = {

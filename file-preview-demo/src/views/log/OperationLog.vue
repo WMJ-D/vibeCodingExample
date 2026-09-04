@@ -1,6 +1,11 @@
 <template>
   <div class="page-container">
     <el-form :model="query" inline>
+      <el-form-item label="所属系统">
+        <el-select v-model="query.appId" placeholder="请选择" clearable filterable style="width: 150px">
+          <el-option v-for="app in appOptions" :key="app.appId" :label="app.appName" :value="app.appId" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="操作模块">
         <el-input v-model="query.module" placeholder="请输入" clearable />
       </el-form-item>
@@ -34,6 +39,9 @@
     <el-table v-loading="loading" :data="tableData" border stripe @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="50" align="center" />
       <el-table-column type="index" label="序号" width="60" align="center" />
+      <el-table-column prop="appName" label="所属系统" width="110" align="center">
+        <template #default="{ row }">{{ row.appName || row.appId || '—' }}</template>
+      </el-table-column>
       <el-table-column prop="module" label="操作模块" width="120" />
       <el-table-column prop="type" label="操作类型" width="80" align="center">
         <template #default="{ row }">
@@ -66,6 +74,7 @@
 
     <el-dialog v-model="detailVisible" title="操作日志详情" width="720px" destroy-on-close>
       <el-descriptions :column="1" border size="small">
+        <el-descriptions-item label="所属系统">{{ detail?.appName || detail?.appId || '—' }}</el-descriptions-item>
         <el-descriptions-item label="操作模块">{{ detail?.module }}</el-descriptions-item>
         <el-descriptions-item label="操作类型">{{ detail?.type }}</el-descriptions-item>
         <el-descriptions-item label="操作描述">{{ detail?.description }}</el-descriptions-item>
@@ -87,12 +96,23 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { batchDeleteOperationLogs, exportOperationLogs, getOperationLogList } from '@/api/log'
+import { getAppList } from '@/api/app'
 
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
 const selectedIds = ref([])
-const query = reactive({ module: '', operator: '', type: '', dateRange: null, pageNum: 1, pageSize: 10 })
+const appOptions = ref([])
+const query = reactive({ appId: '', module: '', operator: '', type: '', dateRange: null, pageNum: 1, pageSize: 10 })
+
+async function loadApps() {
+  try {
+    const result = await getAppList({ pageNum: 1, pageSize: 100 })
+    appOptions.value = (result?.list || []).filter(item => item.status === '1' || item.status === 1)
+  } catch {
+    appOptions.value = []
+  }
+}
 
 const detailVisible = ref(false)
 const detail = ref(null)
@@ -112,6 +132,7 @@ function formatJson(value) {
 
 function getQueryParams(includePagination = true) {
   const params = {
+    appId: query.appId || undefined,
     module: query.module,
     operator: query.operator,
     type: query.type,
@@ -171,7 +192,7 @@ async function handleExport() {
   }
 }
 
-onMounted(() => getList())
+onMounted(() => { getList(); loadApps() })
 </script>
 
 <style scoped>
