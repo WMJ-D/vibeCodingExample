@@ -1,0 +1,24 @@
+﻿node.exe : npm verbose cli C:\Users\wangmingjun\.workbuddy\binaries\node\versio
+ns\22.22.2\node.exe C:\Users\wangmingjun\.workbuddy\binaries\node\versions\22.2
+2.2\node_modules\npm\bin\npm-cli.js
+所在位置 行:1 字符: 1
++ & "C:\Users\wangmingjun\.workbuddy\binaries\node\versions\22.22.2/nod ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm verbose cli...\bin\npm-cli.js 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm info using npm@10.9.7
+npm info using node@v22.22.2
+npm verbose title npm install
+npm verbose argv "install" "--no-audit" "--no-fund" "--loglevel" "verbose"
+npm verbose logfile logs-max:10 dir:C:\Users\wangmingjun\AppData\Local\npm-cach
+e\_logs\2026-08-13T09_43_30_106Z-
+npm verbose logfile C:\Users\wangmingjun\AppData\Local\npm-cache\_logs\2026-08-
+13T09_43_30_106Z-debug-0.log
+npm http fetch GET 200 http://192.168.52.55:8081/repository/npm-public/@react-t
+hree%2fdrei 90117ms (cache miss)
+npm http fetch GET 200 http://192.168.52.55:8081/repository/npm-public/@react-t
+hree%2ffiber 89398ms (cache miss)
+npm http fetch GET 200 http://192.168.52.55:8081/repository/npm-public/leva 912
+64ms (cache miss)
