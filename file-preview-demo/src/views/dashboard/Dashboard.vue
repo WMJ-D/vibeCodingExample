@@ -257,10 +257,11 @@ import { ElMessage } from 'element-plus'
 import { getDashboardStatistics } from '@/api/dashboard'
 import { useBookmarkStore } from '@/composables/useBookmarkStore'
 import { useExtensionDownload } from '@/composables/useExtensionDownload'
+import { getThemeVar } from '@/composables/useTheme'
 
 /* ---------- 统计卡片 ---------- */
 const stats = ref([
-  { title: '用户总数', value: '0', icon: 'User', color: '#2ee68a' },
+  { title: '用户总数', value: '0', icon: 'User', color: getThemeVar('--theme-primary', '#2ee68a') },
   { title: '角色数量', value: '0', icon: 'UserFilled', color: '#67c23a' },
   { title: '菜单数量', value: '0', icon: 'Menu', color: '#e6a23c' },
   { title: '今日访问', value: '0', icon: 'View', color: '#f56c6c' },
@@ -523,6 +524,6 @@ onUnmounted(() => clearInterval(timer))
 
 .bookmarks-item.is-active {
   background: #eafdf4;
-  border-left: 3px solid #2ee68a;
+  border-left: 3px solid var(--theme-primary);
 }
 </style>

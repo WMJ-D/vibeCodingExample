@@ -88,7 +88,7 @@ export function setupDynamicRoutes(routerInstance = router, menus = []) {
     path: '/:pathMatch(.*)*',
     name: 'DynamicNotFound',
     component: {
-      render: () => h('div', { style: 'padding: 48px; color: #d7ffe7;' }, '页面不存在'),
+      render: () => h('div', { style: 'padding: 48px; color: var(--theme-text-bright);' }, '页面不存在'),
     },
     meta: { title: '页面不存在', keepAlive: false },
   }))

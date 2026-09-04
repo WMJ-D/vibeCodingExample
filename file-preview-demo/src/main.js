@@ -10,8 +10,12 @@ import store from './store'
 import PermissionDirective from './directives/permission'
 import FileViewer from '@flyfish-group/file-viewer3'
 import './styles/index.scss'
+import { initTheme } from './composables/useTheme'
 
 const app = createApp(App)
+
+// 恢复本地保存的主题（Trae/抖音系列/豆包系列）
+initTheme()
 
 // 注册所有图标
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {

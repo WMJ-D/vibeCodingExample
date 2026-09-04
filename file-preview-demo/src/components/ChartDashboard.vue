@@ -178,6 +178,9 @@ import {
   Top,
   Bottom
 } from '@element-plus/icons-vue'
+import { getThemeVar, useTheme } from '@/composables/useTheme'
+
+const { currentTheme } = useTheme()
 
 // 数据状态
 const timeRange = ref('7d')
@@ -209,32 +212,33 @@ let pieChartInstance = null
 let weekChartInstance = null
 let lineChartInstance = null
 
-const chartPalette = {
-  bg: '#0d1c13',
-  panel: '#07120c',
-  line: '#173f2a',
-  text: '#d7ffe7',
-  muted: '#93b89f',
-  green: '#2ee68a',
-  greenDark: '#1f8f58',
+// 从 CSS 变量读取主题色，切换主题后图表跟随变化
+const buildPalette = () => ({
+  bg: getThemeVar('--theme-bg'),
+  panel: getThemeVar('--theme-bg-deep'),
+  line: getThemeVar('--theme-border'),
+  text: getThemeVar('--theme-text-bright'),
+  muted: getThemeVar('--theme-text-dim'),
+  green: getThemeVar('--theme-primary'),
+  greenDark: getThemeVar('--theme-primary-dim'),
   orange: '#f1b44c',
   red: '#ff6b6b',
   cyan: '#55d6be'
-}
+})
 
-const tooltipStyle = {
-  backgroundColor: 'rgba(7, 18, 12, 0.94)',
-  borderColor: chartPalette.line,
-  textStyle: { color: chartPalette.text }
-}
+const buildTooltipStyle = () => ({
+  backgroundColor: `rgba(${getThemeVar('--theme-bg-deep-rgb')}, 0.94)`,
+  borderColor: getThemeVar('--theme-border'),
+  textStyle: { color: getThemeVar('--theme-text-bright') }
+})
 
-const axisStyle = {
-  axisLine: { lineStyle: { color: chartPalette.line } },
-  axisTick: { lineStyle: { color: chartPalette.line } },
-  axisLabel: { color: chartPalette.muted },
-  splitLine: { lineStyle: { color: 'rgba(23, 63, 42, 0.72)' } },
-  nameTextStyle: { color: chartPalette.muted }
-}
+const buildAxisStyle = () => ({
+  axisLine: { lineStyle: { color: getThemeVar('--theme-border') } },
+  axisTick: { lineStyle: { color: getThemeVar('--theme-border') } },
+  axisLabel: { color: getThemeVar('--theme-text-dim') },
+  splitLine: { lineStyle: { color: `rgba(${getThemeVar('--theme-border-rgb')}, 0.72)` } },
+  nameTextStyle: { color: getThemeVar('--theme-text-dim') }
+})
 
 // 模拟的月度数据
 const monthData = ref([
@@ -254,6 +258,10 @@ const monthData = ref([
 
 // 初始化图表
 const initCharts = () => {
+  const chartPalette = buildPalette()
+  const tooltipStyle = buildTooltipStyle()
+  const axisStyle = buildAxisStyle()
+
   // 主柱状图
   if (!mainChartInstance && mainChart.value) {
     mainChartInstance = echarts.init(mainChart.value)
@@ -341,7 +349,7 @@ const initCharts = () => {
           itemStyle: {
             shadowBlur: 10,
             shadowOffsetX: 0,
-            shadowColor: 'rgba(46, 230, 138, 0.28)'
+            shadowColor: `rgba(${getThemeVar('--theme-primary-rgb')}, 0.28)`
           }
         }
       }
@@ -394,8 +402,8 @@ const initCharts = () => {
         smooth: true,
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(46, 230, 138, 0.28)' },
-            { offset: 1, color: 'rgba(46, 230, 138, 0.04)' }
+            { offset: 0, color: `rgba(${getThemeVar('--theme-primary-rgb')}, 0.28)` },
+            { offset: 1, color: `rgba(${getThemeVar('--theme-primary-rgb')}, 0.04)` }
           ])
         },
         lineStyle: { color: chartPalette.green }
@@ -433,6 +441,11 @@ watch(chartType, () => {
   initCharts()
 })
 
+// 监听主题变化，图表重绘跟随主题
+watch(currentTheme, () => {
+  initCharts()
+})
+
 // 监听窗口大小变化
 window.addEventListener('resize', () => {
   if (mainChartInstance) mainChartInstance.resize()
@@ -453,15 +466,15 @@ onMounted(() => {
 .chart-dashboard {
   min-height: calc(100vh - 120px);
   padding: 22px;
-  color: #d7ffe7;
-  background: #07120c;
+  color: var(--theme-text-bright);
+  background: var(--theme-bg-deep);
 }
 
 .chart-dashboard__hero,
 .stat-card,
 .chart-card {
-  border: 1px solid #173f2a;
-  background: #0d1c13;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-bg);
 }
 
 .chart-dashboard__hero {
@@ -475,21 +488,21 @@ onMounted(() => {
 
 .chart-dashboard__eyebrow {
   margin: 0 0 8px;
-  color: #2ee68a;
+  color: var(--theme-primary);
   font-size: 12px;
   letter-spacing: 2px;
 }
 
 .chart-dashboard__title {
   margin: 0;
-  color: #f1fff6;
+  color: var(--theme-text-bright);
   font-size: 30px;
   font-weight: 700;
 }
 
 .chart-dashboard__desc {
   margin: 10px 0 0;
-  color: #93b89f;
+  color: var(--theme-text-dim);
 }
 
 .chart-dashboard__actions {
@@ -503,9 +516,9 @@ onMounted(() => {
 }
 
 .chart-dashboard__button {
-  border-color: #2ee68a;
-  color: #07120c;
-  background: #2ee68a;
+  border-color: var(--theme-primary);
+  color: var(--theme-bg-deep);
+  background: var(--theme-primary);
 }
 
 .stat-card {
@@ -526,12 +539,12 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   margin-right: 15px;
-  color: #07120c;
+  color: var(--theme-bg-deep);
   font-size: 24px;
 }
 
 .stat-icon--user {
-  background: #2ee68a;
+  background: var(--theme-primary);
 }
 
 .stat-icon--order {
@@ -549,7 +562,7 @@ onMounted(() => {
 .stat-number {
   font-size: 24px;
   font-weight: 700;
-  color: #f1fff6;
+  color: var(--theme-text-bright);
   line-height: 1.2;
 }
 
@@ -559,7 +572,7 @@ onMounted(() => {
 
 .stat-title {
   font-size: 14px;
-  color: #93b89f;
+  color: var(--theme-text-dim);
   margin-top: 4px;
 }
 
@@ -569,19 +582,19 @@ onMounted(() => {
 
 .chart-card :deep(.el-card__header),
 .stat-card :deep(.el-card__header) {
-  border-bottom-color: #173f2a;
+  border-bottom-color: var(--theme-border);
 }
 
 .chart-card :deep(.el-card__body),
 .stat-card :deep(.el-card__body) {
-  background: #0d1c13;
+  background: var(--theme-bg);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #f1fff6;
+  color: var(--theme-text-bright);
   font-weight: 700;
 }
 
@@ -591,32 +604,32 @@ onMounted(() => {
 
 .chart-dashboard :deep(.el-input__wrapper),
 .chart-dashboard :deep(.el-select__wrapper) {
-  background: #07120c;
-  box-shadow: 0 0 0 1px #173f2a inset;
+  background: var(--theme-bg-deep);
+  box-shadow: 0 0 0 1px var(--theme-border) inset;
 }
 
 .chart-dashboard :deep(.el-input__wrapper:hover),
 .chart-dashboard :deep(.el-select__wrapper:hover) {
-  box-shadow: 0 0 0 1px #2ee68a inset;
+  box-shadow: 0 0 0 1px var(--theme-primary) inset;
 }
 
 .chart-dashboard :deep(.el-input__inner),
 .chart-dashboard :deep(.el-select__placeholder),
 .chart-dashboard :deep(.el-select__selected-item) {
-  color: #d7ffe7;
+  color: var(--theme-text-bright);
 }
 
 .chart-dashboard :deep(.el-radio-button__inner) {
-  border-color: #173f2a;
-  color: #93b89f;
-  background: #07120c;
+  border-color: var(--theme-border);
+  color: var(--theme-text-dim);
+  background: var(--theme-bg-deep);
 }
 
 .chart-dashboard :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
-  border-color: #2ee68a;
-  color: #07120c;
-  background: #2ee68a;
-  box-shadow: -1px 0 0 0 #2ee68a;
+  border-color: var(--theme-primary);
+  color: var(--theme-bg-deep);
+  background: var(--theme-primary);
+  box-shadow: -1px 0 0 0 var(--theme-primary);
 }
 
 .chart-dashboard :deep(.el-table__inner-wrapper),
@@ -626,22 +639,22 @@ onMounted(() => {
 .chart-dashboard :deep(.el-scrollbar__view),
 .chart-dashboard :deep(th.el-table__cell),
 .chart-dashboard :deep(td.el-table__cell) {
-  background: #0d1c13;
+  background: var(--theme-bg);
 }
 
 .chart-dashboard :deep(.el-table__inner-wrapper::before),
 .chart-dashboard :deep(.el-table__border-left-patch) {
-  background-color: #173f2a;
+  background-color: var(--theme-border);
 }
 
 .chart-dashboard :deep(th.el-table__cell),
 .chart-dashboard :deep(td.el-table__cell) {
-  border-bottom-color: #173f2a;
-  color: #d7ffe7;
+  border-bottom-color: var(--theme-border);
+  color: var(--theme-text-bright);
 }
 
 .chart-dashboard :deep(.el-table__row:hover > td.el-table__cell) {
-  background: #102817;
+  background: var(--theme-bg-hover);
 }
 
 .el-table :deep(.cell) {
@@ -649,7 +662,7 @@ onMounted(() => {
 }
 
 .trend-up {
-  color: #2ee68a;
+  color: var(--theme-primary);
 }
 
 .trend-down {

@@ -1,0 +1,148 @@
+// ============================================================
+// 主题变量定义
+// 通过 html[data-theme='xxx'] 切换主题，默认 :root 为 Trae 经典绿
+// 变量说明：
+//   --theme-bg-deep       最深背景（body/主内容区）
+//   --theme-bg            面板背景（侧边栏/头部/卡片）
+//   --theme-bg-hover      悬停背景
+//   --theme-bg-soft       次深背景（引用块/输入区等）
+//   --theme-border        主边框
+//   --theme-border-soft   弱边框
+//   --theme-primary       主题主色
+//   --theme-primary-dim   主色暗档（滚动条/hover）
+//   --theme-primary-deep  主色深档（气泡背景等）
+//   --theme-text-dim      次要文字
+//   --theme-text-soft     柔和文字
+//   --theme-text-bright   强调文字（亮色主题下为深色文字）
+//   --theme-*-rgb         对应颜色的 RGB 三元组（用于 rgba()）
+// ============================================================
+
+:root {
+  --theme-bg-deep: #07120c;
+  --theme-bg: #0d1c13;
+  --theme-bg-hover: #102817;
+  --theme-bg-soft: #0b1810;
+  --theme-border: #173f2a;
+  --theme-border-soft: #285c3d;
+  --theme-primary: #2ee68a;
+  --theme-primary-dim: #1f8f58;
+  --theme-primary-deep: #176b43;
+  --theme-text-dim: #93b89f;
+  --theme-text-soft: #a8cfb5;
+  --theme-text-bright: #d7ffe7;
+  --theme-primary-rgb: 46, 230, 138;
+  --theme-bg-deep-rgb: 7, 18, 12;
+  --theme-border-rgb: 23, 63, 42;
+}
+
+// ---------------- 抖音系列 ----------------
+
+// 抖音暗夜：黑底 + 品牌青
+html[data-theme='douyin-dark'] {
+  --theme-bg-deep: #09090b;
+  --theme-bg: #121216;
+  --theme-bg-hover: #1b1b21;
+  --theme-bg-soft: #0e0e12;
+  --theme-border: #26262e;
+  --theme-border-soft: #34343e;
+  --theme-primary: #25f4ee;
+  --theme-primary-dim: #17aaa5;
+  --theme-primary-deep: #0f7a76;
+  --theme-text-dim: #8f939c;
+  --theme-text-soft: #b7e9e7;
+  --theme-text-bright: #f0f4f5;
+  --theme-primary-rgb: 37, 244, 238;
+  --theme-bg-deep-rgb: 9, 9, 11;
+  --theme-border-rgb: 38, 38, 46;
+
+  --el-color-primary: #25f4ee;
+  --el-color-primary-light-3: #6ff7f2;
+  --el-color-primary-light-5: #93f9f6;
+  --el-color-primary-light-7: #b8fbf9;
+  --el-color-primary-light-8: #cdfcfa;
+  --el-color-primary-light-9: #e2fefd;
+  --el-color-primary-dark-2: #1ec4bf;
+}
+
+// 抖音热力：白底 + 品牌红（抖音 App 风格）
+html[data-theme='douyin-red'] {
+  --theme-bg-deep: #f5f5f7;
+  --theme-bg: #ffffff;
+  --theme-bg-hover: #f2f2f4;
+  --theme-bg-soft: #f8f8fa;
+  --theme-border: #e8e8ec;
+  --theme-border-soft: #d9d9e0;
+  --theme-primary: #fe2c55;
+  --theme-primary-dim: #d91f44;
+  --theme-primary-deep: #cc1b40;
+  --theme-text-dim: #6b6f76;
+  --theme-text-soft: #3d434c;
+  --theme-text-bright: #1d2129;
+  --theme-primary-rgb: 254, 44, 85;
+  --theme-bg-deep-rgb: 245, 245, 247;
+  --theme-border-rgb: 232, 232, 236;
+
+  --el-color-primary: #fe2c55;
+  --el-color-primary-light-3: #fe6b88;
+  --el-color-primary-light-5: #fe96aa;
+  --el-color-primary-light-7: #feb9cc;
+  --el-color-primary-light-8: #fecde0;
+  --el-color-primary-light-9: #ffe2eb;
+  --el-color-primary-dark-2: #cb2344;
+}
+
+// ---------------- 豆包系列 ----------------
+
+// 豆包星夜：深蓝底 + 品牌蓝
+html[data-theme='doubao-blue'] {
+  --theme-bg-deep: #0a0d16;
+  --theme-bg: #10141f;
+  --theme-bg-hover: #181d2e;
+  --theme-bg-soft: #0d111c;
+  --theme-border: #252c42;
+  --theme-border-soft: #333c58;
+  --theme-primary: #4d6bfe;
+  --theme-primary-dim: #3550c3;
+  --theme-primary-deep: #243a99;
+  --theme-text-dim: #8e97b3;
+  --theme-text-soft: #bcc8f2;
+  --theme-text-bright: #e4eaff;
+  --theme-primary-rgb: 77, 107, 254;
+  --theme-bg-deep-rgb: 10, 13, 22;
+  --theme-border-rgb: 37, 44, 66;
+
+  --el-color-primary: #4d6bfe;
+  --el-color-primary-light-3: #7d92fe;
+  --el-color-primary-light-5: #9eb0fe;
+  --el-color-primary-light-7: #bfcdfd;
+  --el-color-primary-light-8: #d3ddff;
+  --el-color-primary-light-9: #e8eeff;
+  --el-color-primary-dark-2: #3e56cb;
+}
+
+// 豆包晴空：白底 + 品牌蓝（豆包 App 风格）
+html[data-theme='doubao-light'] {
+  --theme-bg-deep: #f4f6fb;
+  --theme-bg: #ffffff;
+  --theme-bg-hover: #eef1fb;
+  --theme-bg-soft: #f8f9fd;
+  --theme-border: #e3e8f4;
+  --theme-border-soft: #d3dbf0;
+  --theme-primary: #4d6bfe;
+  --theme-primary-dim: #3d55ca;
+  --theme-primary-deep: #3248a8;
+  --theme-text-dim: #6b7280;
+  --theme-text-soft: #3b4356;
+  --theme-text-bright: #1f2329;
+  --theme-primary-rgb: 77, 107, 254;
+  --theme-bg-deep-rgb: 244, 246, 251;
+  --theme-border-rgb: 227, 232, 244;
+
+  --el-color-primary: #4d6bfe;
+  --el-color-primary-light-3: #8297fe;
+  --el-color-primary-light-5: #a6b5fe;
+  --el-color-primary-light-7: #c9d3fe;
+  --el-color-primary-light-8: #dbe2fe;
+  --el-color-primary-light-9: #ecf0ff;
+  --el-color-primary-dark-2: #3e56cb;
+}
